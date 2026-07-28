@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GURPS AI TRPG GM</title>
+<script src="https://cdn.tailwindcss.com">
+</script>
+<script>
+tailwind.config = { darkMode: 'class' }
+</script>
+<style>
+* { scrollbar-width: thin; }
+:root { scrollbar-color: #d1d5db #f3f4f6; }
+.dark { scrollbar-color: #4b5563 #111827; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f3f4f6; }
+.dark ::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+.chat-area { scroll-behavior: smooth; }
+.gm-msg a { color: #2563eb; text-decoration: underline; }
+.dark .gm-msg a { color: #60a5fa; }
+.gm-msg ul, .gm-msg ol { padding-left: 1.5em; margin: 0.25em 0; }
+.gm-msg li { margin: 0.125em 0; }
+.gm-msg code { background: #e5e7eb; padding: 0.125em 0.375em; border-radius: 3px; font-size: 0.9em; color: #1f2937; }
+.dark .gm-msg code { background: #374151; color: #e5e7eb; }
+.gm-msg pre { background: #e5e7eb; border: 1px solid #d1d5db; padding: 0.75em; border-radius: 6px; overflow-x: auto; margin: 0.5em 0; }
+.dark .gm-msg pre { background: #374151; border-color: #4b5563; }
+.gm-msg p { margin: 0.4em 0; }
+.gm-msg blockquote { border-left: 3px solid #3b82f6; padding-left: 0.75em; margin: 0.5em 0; color: #6b7280; }
+.dark .gm-msg blockquote { color: #9ca3af; }
+.gm-msg hr { border-color: #d1d5db; border-style: solid; border-width: 0 0 1px; margin: 0.75em 0; }
+.dark .gm-msg hr { border-color: #4b5563; }
+@keyframes pulse-dot { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+.loading-dot { animation: pulse-dot 1.4s infinite both; }
+.loading-dot:nth-child(2) { animation-delay: 0.16s; }
+.loading-dot:nth-child(3) { animation-delay: 0.32s; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.msg-anim { animation: fade-in 0.3s ease-out; }
+@keyframes modal-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal-anim { animation: modal-in 0.2s ease-out; }
+.tag-chip { transition: all 0.15s ease; }
+</style>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
+</head>
+<body class="bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-200 font-sans antialiased transition-colors duration-200">
+
+<div id="app" class="flex h-screen overflow-hidden">
+
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform -translate-x-full transition-all duration-300 lg:relative lg:translate-x-0 lg:z-0 flex flex-col shadow-sm">
+
+    <div class="flex items-center justify-between lg:hidden px-3 pt-3 pb-1">
+      <span class="text-xs font-semibold text-gray-400">MENU</span>
+      <button onclick="toggleSidebar()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3 space-y-3">
+
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700/60">
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="user" class="w-3.5 h-3.5"></i>キャラクターシート</div>
+        <div class="flex items-center gap-1">
+          <input type="text" id="char-name" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400" placeholder="キャラクター名" maxlength="20">
+          <button onclick="toggleNameLock()" id="name-lock-btn" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400 border border-gray-300 dark:border-gray-600 rounded" title="ロック"><i data-lucide="unlock" class="w-3 h-3"></i></button>
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-gray-400">
+          <span>CP: <span id="cp-total">150</span></span>
+          <span>使用 <span id="cp-used" class="text-blue-500 font-semibold">0</span></span>
+          <span>未使用 <span id="cp-free" class="text-green-500 font-semibold">150</span></span>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <div><label class="block text-[10px] text-gray-400">ST (筋力)</label><div id="stat-st" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
+          <div><label class="block text-[10px] text-gray-400">DX (敏捷性)</label><div id="stat-dx" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
+          <div><label class="block text-[10px] text-gray-400">IQ (知力)</label><div id="stat-iq" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
+          <div><label class="block text-[10px] text-gray-400">HT (生命力)</label><div id="stat-ht" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-gray-400">HP</label>
+            <span id="hp-display" class="block w-full text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5">10/10</span>
+          </div>
+          <div>
+            <label class="block text-[10px] text-gray-400">FP</label>
+            <span id="fp-display" class="block w-full text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5">10/10</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-4 gap-1 text-[10px] text-gray-400">
+          <div>意志 <span id="stat-will" class="text-gray-600 dark:text-gray-300 font-semibold">10</span></div>
+          <div>知覚 <span id="stat-per" class="text-gray-600 dark:text-gray-300 font-semibold">10</span></div>
+          <div>速度 <span id="stat-bs" class="text-gray-600 dark:text-gray-300 font-semibold">5.00</span></div>
+          <div>移動 <span id="stat-bm" class="text-gray-600 dark:text-gray-300 font-semibold">5</span></div>
+          <div>よけ <span id="stat-dodge" class="text-gray-600 dark:text-gray-300 font-semibold">8</span></div>
+          <div>BL <span id="stat-bl" class="text-gray-600 dark:text-gray-300 font-semibold">20</span></div>
+          <div>突き <span id="stat-thr" class="text-gray-600 dark:text-gray-300 font-semibold">1d-2</span></div>
+          <div>振り <span id="stat-sw" class="text-gray-600 dark:text-gray-300 font-semibold">1d</span></div>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700/60">
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="star" class="w-3.5 h-3.5"></i>有利/不利な特徴</div>
+        <div id="advantages-list" class="space-y-1"></div>
+      </div>
+
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700/60">
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="zap" class="w-3.5 h-3.5"></i>技能</div>
+        <div id="skills-list" class="space-y-1"></div>
+      </div>
+
+      <div id="custom-rules-section" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700/60 hidden">
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>カスタムルール</div>
+        <div id="custom-rules-list" class="space-y-1"></div>
+      </div>
+
+    </div>
+
+    <div class="border-t border-gray-200 dark:border-gray-800">
+      <button onclick="toggleSettings()" class="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors">
+        <span class="flex items-center gap-2"><i data-lucide="settings" class="w-3.5 h-3.5"></i>設定</span>
+        <i data-lucide="chevron-down" id="settings-chevron" class="w-3.5 h-3.5 transition-transform"></i>
+      </button>
+      <div id="settings-panel" class="hidden px-3 pb-3 pt-1 space-y-2 bg-gray-50/80 dark:bg-gray-900/60">
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">OpenRouter API Key</label>
+          <input type="password" id="api-key" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400" placeholder="sk-or-v1-..." autocomplete="off">
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">モデル</label>
+          <select id="model-select" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300">
+            <option value="openrouter/free">openrouter/free (自動選択)</option>
+            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (free)</option>
+            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash Exp (free)</option>
+            <option value="qwen/qwen3-8b-instruct:free">Qwen3 8B (free)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col min-w-0 h-screen">
+    <header class="flex items-center justify-between px-4 py-2 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800 backdrop-blur-sm transition-colors">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1"><i data-lucide="menu" class="w-5 h-5"></i></button>
+        <span class="text-base font-bold text-gray-800 dark:text-gray-100 tracking-wide">GURPS</span>
+        <span class="hidden sm:inline text-xs text-gray-400">AI TRPG GM</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button onclick="toggleTheme()" class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700" title="テーマ切替">
+          <i data-lucide="sun" class="w-3.5 h-3.5 hidden dark:inline"></i>
+          <i data-lucide="moon" class="w-3.5 h-3.5 dark:hidden"></i>
+        </button>
+        <button onclick="showWorldModal()" class="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-800/40 border border-purple-200 dark:border-purple-800/40 rounded transition-colors text-purple-700 dark:text-purple-300"><i data-lucide="globe" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">世界創成</span></button>
+        <button onclick="saveLogTxt()" class="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors text-gray-500 dark:text-gray-400"><i data-lucide="book-open" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">ログ</span></button>
+        <button onclick="saveLogJson()" class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"><i data-lucide="download" class="w-3.5 h-3.5"></i></button>
+        <button onclick="document.getElementById('load-log-input').click()" class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-700"><i data-lucide="upload" class="w-3.5 h-3.5"></i></button>
+        <input type="file" id="load-log-input" accept=".json" class="hidden" onchange="loadLog(event)">
+        <button onclick="resetSession()" class="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800/30"><i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </header>
+
+    <div id="chat-log" class="flex-1 overflow-y-auto p-4 space-y-3 chat-area bg-gray-50/50 dark:bg-transparent">
+      <div class="flex flex-col items-center justify-center h-full select-none">
+        <div class="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 flex items-center justify-center mb-4">
+          <i data-lucide="earth" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>
+        </div>
+        <p class="text-sm text-gray-400 mb-1">まだ世界が創造されていません</p>
+        <p class="text-xs text-gray-400/70 mb-4">「世界創成」ボタンから、あなただけの世界を創りましょう</p>
+        <button onclick="showWorldModal()" class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg transition-colors shadow-sm"><i data-lucide="globe" class="w-4 h-4"></i>世界を創造する</button>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm transition-colors">
+      <div id="loading-indicator" class="hidden px-4 py-1.5 bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span class="loading-dot w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full inline-block"></span>
+          <span class="loading-dot w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full inline-block"></span>
+          <span class="loading-dot w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full inline-block"></span>
+          <span class="ml-1">AI GM が応答を生成中...</span>
+        </div>
+      </div>
+      <div class="flex items-end gap-2 p-3">
+        <div class="flex flex-col gap-1 shrink-0">
+          <button onclick="cycleChatMode()" id="chat-mode-btn" class="h-[38px] px-2 text-[10px] font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">PC</button>
+        </div>
+        <textarea id="chat-input" rows="1" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 resize-none max-h-32" placeholder="アクションや発言を入力... (Enter:送信, Shift+Enter:改行)"></textarea>
+        <button onclick="sendMessage()" id="send-btn" class="h-[38px] w-[38px] flex items-center justify-center bg-gray-800 hover:bg-gray-700 dark:bg-gray-200 dark:hover:bg-gray-300 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 text-white dark:text-gray-800 rounded-lg transition-colors shrink-0 shadow-sm" disabled><i data-lucide="send" class="w-4 h-4"></i></button>
+      </div>
+    </footer>
+  </main>
+
+</div>
+
+<div id="world-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeWorldModal()"></div>
+  <div class="absolute inset-4 md:inset-8 lg:inset-12 flex items-center justify-center pointer-events-none">
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl w-full max-w-2xl max-h-full overflow-hidden pointer-events-auto modal-anim flex flex-col shadow-xl">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <div class="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-300"><i data-lucide="globe" class="w-4 h-4"></i>世界創成</div>
+        <button onclick="closeWorldModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="overflow-y-auto p-5 space-y-5" id="modal-tags"></div>
+      <div class="flex items-center justify-between px-5 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
+        <span id="modal-count" class="text-xs text-gray-400">選択: 0</span>
+        <button onclick="createWorld()" id="world-create-btn" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm" disabled>創造する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+</script>
+<script>
+marked.setOptions({ breaks: true, gfm: true, mangle: false, headerIds: false });
+
+const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨場感あるゲームマスター（GM）です。
+
+【絶対ルール: 言語】
+- 必ず日本語のみで出力してください。英単語・他言語を一切混ぜないでください。
+- キャラクター名や固有名詞もすべて日本語/カタカナで表記してください。
+
+【進行ルール】
+1. プレイヤーの行動やダイス結果に基づき、物語を情景豊かに描写してください。
+2. ダイスの結果（成功度・失敗度・クリティカル・ファンブル）に合わせて、展開のドラマチックさを変化させてください。
+   - クリティカル: 期待以上の大成功、棚ぼた的な幸運
+   - 成功度が高い (+3以上): 鮮やかで鮮烈な成功
+   - 成功度が低い (+0〜+2): ぎりぎりでの成功、緊迫した展開
+   - 失敗度が高い (-4以上): 深刻な失敗や裏目
+   - ファンブル: 武器破壊、体勢崩壊、予期せぬ大ドジ
+3. 描写の終わりには、次にプレイヤーが取れる行動の提案や問いかけを含めてください。
+4. 戦闘やイベントでプレイヤーのHPやFPが変動した場合、文章の最後に以下の形式でタグを出力してください（複数可）。
+   [HP:-3] [FP:-1] [HP:+2]
+5. NPCとして発言する場合は、必ず以下の形式でNPC名を先頭に付けてください。
+   【村長】ようこそ、旅人よ。
+   この場合、画面上は「村長（マスター）」と表示されます。
+6. プレイヤーはCP（キャラクターポイント）を使って能力値や技能を購入します。
+   - 基本CP: 100、能力値: ST/HT=±10CP, DX/IQ=±20CP, HP±1=2CP, FP±1=3CP
+   - 技能は難度(Easy/Average/Hard)に応じCPで購入
+   - プレイヤーが「/buy 剣 A 2 dx」のようにCP購入を宣言できます（末尾のdxは基準属性、省略時はIQ）
+   - プレイヤーから技能や能力値の質問（「剣を取るのにいくらCPが必要？」等）にはGMとして適切にアドバイスしてください。
+7. 【重要】あなたの応答に含まれる /buy コマンドは自動検出され、キャラクターシートに即座に反映されます。
+   - プレイヤーの意向を聞いた上で、以下を出力してください（各行を独立した /buy コマンドとして検出します）:
+     例: 「/buy ST +1」
+     例: 「/buy DX -1」
+     例: 「/buy 剣 A 4 dx」
+     例: 「/buy 利:容姿端麗 5」
+     例: 「/buy 不利:小心 -15」
+   - コマンドは行頭に記述し、各行1コマンドとして出力してください。
+   - 説明文とは別の行に分けて記述すれば、自動反映後に説明文としても機能します。
+8. プレイヤーが使用可能なコマンド（あなたも応答内で使用できます）:
+   - "/buy 技能名 E/A/H CP [st/dx/iq/ht]" - 技能購入
+   - "/buy 利:特徴名 CP" - 有利な特徴を購入
+   - "/buy 不利:特徴名 -CP" - 不利な特徴を取得（CP獲得）
+   - "/buy ST/DX/IQ/HT +1" - 能力値上昇（-1で低下）
+   - "/buy HP +2" / "/buy FP +1" - HP/FP上限変更
+   - "/npcadd 名前 ST DX IQ HT" - NPC追加
+   - "/npc 名前 発言" - NPCとして発言
+   - "/roll 目標値 [+-修正]" - 3D6判定
+   - "/rule テキスト" - カスタムルール保存
+9. プレイヤーはカスタムルールを「/rule テキスト」で保存できます。`;
+
+const WORLD_SYSTEM_PROMPT = 'あなたはTRPGの世界設定を創作するプロのワールドビルダーです。必ず日本語のみで出力してください。英単語や他言語を混ぜないでください。固有名詞もすべて日本語またはカタカナで表記すること。';
+
+// ============================================================
+// GURPS Lite 4th Edition 基本ルール参照データ
+// ============================================================
+const GURPS_RULES_REFERENCE = `
+【GURPS Lite 4th Edition 基本ルール】
+
+■ 成功判定（3D6）
+- 3D6の合計 <= 実効スキルで成功
+- クリティカル成功: 出目3-4は常に成功。実効スキル15以上で出目5も、16以上で出目6も成功。
+- クリティカル失敗: 出目18は常に失敗。スキル15以下で出目17も失敗。スキルより10以上高い出目も失敗。
+- 成功比（Margin）= 実効スキル - 出目
+
+■ 対抗判定（Quick Contest）
+- 両者成功判定、成功比が高い方が勝利
+
+■ キャラクター作成（基本CP: 150）
+- ST/HT: ±10CP/レベル（基本値10）
+- DX/IQ: ±20CP/レベル（基本値10）
+- HP: STを基準に±2CP/レベル
+- FP: HTを基準に±3CP/レベル
+- 意志(Will)・知覚(Per): IQ基準（別途購入は±5CP）
+
+■ 二次的特性
+- 基本速度(Basic Speed) = (DX+HT)/4
+- 移動力(Basic Move) = 基本速度の整数部
+- よけ(Dodge) = 基本速度+3（端数切捨て）
+- 基本リフト(BL) = (ST*ST)/5 ポンド
+
+■ 技能コスト表
+- Easy: 1CP=属性-1, 2CP=属性+0, 4CP=属性+1, 以降+4CPで+1
+- Average: 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1
+- Hard: 0CP=属性-3, 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1
+
+■ ST別基本ダメージ
+  ST | 突き(Thr) | 振り(Sw)
+  10 | 1d-2      | 1d
+  11 | 1d-1      | 1d+1
+  12 | 1d-1      | 1d+2
+  13 | 1d        | 2d-1
+  14 | 1d        | 2d
+
+■ 戦闘
+- 攻撃: 武器スキルで命中判定（3D6 <= 技能レベル）
+- 能動防御（1回/ターン）:
+  - よけ: 基本速度+3 - 重荷修正
+  - 受け: (技能/2)+3（切捨て）
+  - 止め: (盾技能/2)+3（切捨て）
+- 負傷倍率: 刺し×2.0, 切り×1.5, 叩き×1.0, 大型貫通×1.5, 小口径×0.5
+- 防護点(DR): 減算後、負傷倍率適用
+
+■ 状態変化
+- 衝撃(Shock): ダメージ次ターン、負傷HP分（最大-4）のDX/IQペナルティ
+- HP0以下: 毎ターンHT判定、失敗で気絶
+- HP -1×ST: 即死判定(HT)
+- HP -5×ST: 即死
+
+■ 重荷修正（BL基準）
+- 軽(1): 2xBL以下, 移動×0.8, よけ-1
+- 並(2): 3xBL以下, 移動×0.6, よけ-2
+- 重(3): 6xBL以下, 移動×0.4, よけ-3
+- 超(4): 10xBL以下, 移動×0.2, よけ-4
+`;
+
+const WORLD_TAGS = {
+  '世界観': ['ファンタジー', 'SF', '現代', '学園', '和風', '異世界', '中世', '近未来', '終末世界', '古代文明', '宇宙', '海辺', '楽園', '迷宮都市'],
+  '雰囲気': ['シリアス', 'ダーク', '明るい', 'ほのぼの', 'スローライフ', '緊張感', 'ミステリアス', '不気味', '賑やか', '静寂', '夢幻', '退廃的'],
+  '要素': ['魔法', '剣術', '銃火器', '天使', '悪魔', 'ドラゴン', '獣人', '妖精', 'もふもふ', 'ロボット', '錬金術', '召喚', '変身', 'スキル', 'ギルド'],
+  'テーマ': ['冒険', '恋愛', '友情', '復讐', '探索', '領地経営', '飯テロ', '英雄譚', 'サバイバル', '謎解き', '組織抗争', '政治', '戦争', '宗教', '芸術'],
+  'スタイル': ['コメディ多め', 'ハードコア', 'ライト', 'シリアス多め', 'ご都合主義', 'リアル志向', 'ローファンタジー', 'ハイファンタジー', '叙事詩的', '日常系'],
+  '追加': ['VRPG', '配信', 'ヒーロー', 'ダークヒーロー', '反英雄', 'チート', '無双', '成り上がり', '農業', '商業', '村作り', 'スパイ', '探偵', '無法者']
+};
+
+// ============================================================
+// MODULE 1: GURPS コアエンジン (Core Dice & Resolution)
+// ============================================================
+const GURPS_CORE = {
+  roll3d6: function() {
+    var d1 = Math.floor(Math.random() * 6) + 1;
+    var d2 = Math.floor(Math.random() * 6) + 1;
+    var d3 = Math.floor(Math.random() * 6) + 1;
+    return { d1: d1, d2: d2, d3: d3, total: d1 + d2 + d3 };
+  },
+  margin: function(skill, total) { return skill - total; },
+  isCriticalSuccess: function(total, skill) {
+    if (total <= 4) return true;
+    if (total <= 6 && skill >= 16) return true;
+    if (total <= 5 && skill >= 15) return true;
+    return false;
+  },
+  isCriticalFailure: function(total, skill) {
+    if (total >= 18) return true;
+    if (total >= 17 && skill <= 15) return true;
+    if (total - skill >= 10 && total > skill) return true;
+    return false;
+  },
+  evaluateRoll: function(total, skill) {
+    var m = this.margin(skill, total);
+    if (this.isCriticalSuccess(total, skill)) return { label: 'クリティカル成功', margin: m, critical: true };
+    if (this.isCriticalFailure(total, skill)) return { label: 'クリティカル失敗', margin: m, critical: true };
+    if (total <= skill) return { label: total === skill ? 'ギリギリ成功' : '成功', margin: m };
+    return { label: '失敗', margin: m };
+  },
+  successRoll: function(skill, mods) {
+    var effective = skill + (mods || 0);
+    var roll = this.roll3d6();
+    var result = this.evaluateRoll(roll.total, effective);
+    return { roll: roll, effective: effective, result: result };
+  },
+  contestQuick: function(aSkill, aMods, bSkill, bMods) {
+    var a = this.successRoll(aSkill, aMods);
+    var b = this.successRoll(bSkill, bMods);
+    var aWin = a.result.margin > b.result.margin;
+    var margin = Math.abs(a.result.margin - b.result.margin);
+    return { a: a, b: b, winner: aWin ? 'a' : 'b', margin: margin };
+  }
+};
+
+// ============================================================
+// MODULE 2: キャラクターデータモデル (Character Model)
+// ============================================================
+const GURPS_CHAR = {
+  ATTR_COST: { st: 10, dx: 20, iq: 20, ht: 10 },
+  HP_COST: 2, FP_COST: 3,
+  attrLabel: { st: '筋力', dx: '敏捷性', iq: '知力', ht: '生命力' },
+  skillDiffLabel: { E: '易', A: '並', H: '難' },
+  skillCpToLevel: {
+    E: { 1: -1, 2: 0, 4: 1, 8: 2, 12: 3, 16: 4, 20: 5, 24: 6, 28: 7 },
+    A: { 1: -2, 2: -1, 4: 0, 8: 1, 12: 2, 16: 3, 20: 4, 24: 5, 28: 6 },
+    H: { 0: -3, 1: -2, 2: -1, 4: 0, 8: 1, 12: 2, 16: 3, 20: 4, 24: 5, 28: 6 }
+  },
+  skillLevels: [0, 1, 2, 4, 8, 12, 16, 20, 24, 28],
+
+  // ST-based Thrust/Swing damage table (ST 1-20)
+  thrDmg: [0,0,0,0,0,0,0,'1d-3','1d-2','1d-2','1d-2','1d-1','1d-1','1d','1d','1d+1','1d+1','1d+2','1d+2','2d-1','2d-1'],
+  swDmg: [0,0,0,0,0,0,0,'1d-1','1d','1d','1d+1','1d+2','1d+2','2d-1','2d','2d','2d+1','2d+2','2d+2','3d-1','3d-1'],
+
+  fresh: function() {
+    return {
+      name: '', nameLocked: false,
+      st: 10, dx: 10, iq: 10, ht: 10,
+      hp: 10, hpMax: 10, fp: 10, fpMax: 10,
+      will: 10, per: 10,
+      totalCp: 100, usedCp: 0
+    };
+  },
+
+  getBasicSpeed: function(dx, ht) { return (dx + ht) / 4; },
+  getBasicMove: function(bs) { return Math.floor(bs); },
+  getDodge: function(bs) { return Math.floor(bs) + 3; },
+  getBL: function(st) { return (st * st) / 5; },
+  getThrust: function(st) {
+    var idx = Math.min(Math.max(Math.round(st), 1), 20);
+    return this.thrDmg[idx] !== undefined ? this.thrDmg[idx] : '1d-2';
+  },
+  getSwing: function(st) {
+    var idx = Math.min(Math.max(Math.round(st), 1), 20);
+    return this.swDmg[idx] !== undefined ? this.swDmg[idx] : '1d';
+  },
+  getWill: function(c) { return c.will || c.iq; },
+  getPer: function(c) { return c.per || c.iq; },
+
+  calcAttrCpDelta: function(attr, newVal, oldChar) {
+    var c = oldChar || state.char;
+    var oldVal = c[attr];
+    var costPer = this.ATTR_COST[attr] || 10;
+    return (newVal - oldVal) * costPer;
+  },
+  calcHpCpDelta: function(newHpMax) {
+    return (newHpMax - state.char.hpMax) * this.HP_COST;
+  },
+  calcFpCpDelta: function(newFpMax) {
+    return (newFpMax - state.char.fpMax) * this.FP_COST;
+  },
+  skillLevel: function(skill) {
+    var base = state.char[skill.attr] || 10;
+    var table = this.skillCpToLevel[skill.diff] || this.skillCpToLevel.A;
+    var best = -10;
+    for (var c = this.skillLevels.length - 1; c >= 0; c--) {
+      var cp = this.skillLevels[c];
+      if (skill.cp >= cp && table[cp] !== undefined) { best = table[cp]; break; }
+    }
+    if (best === -10) best = -4;
+    return base + best;
+  },
+  calcTotalUsedCp: function() {
+    var total = 0;
+    var c = state.char;
+    total += (c.st - 10) * this.ATTR_COST.st;
+    total += (c.dx - 10) * this.ATTR_COST.dx;
+    total += (c.iq - 10) * this.ATTR_COST.iq;
+    total += (c.ht - 10) * this.ATTR_COST.ht;
+    total += (c.hpMax - c.st) * this.HP_COST;
+    total += (c.fpMax - c.ht) * this.FP_COST;
+    for (var i = 0; i < state.skills.length; i++) {
+      total += state.skills[i].cp;
+    }
+    for (var i = 0; i < state.advantages.length; i++) {
+      total += state.advantages[i].cost;
+    }
+    return total;
+  },
+  canAfford: function(delta) {
+    var used = this.calcTotalUsedCp();
+    return (used + delta) <= state.char.totalCp;
+  }
+};
+
+// ============================================================
+// MODULE 3: 戦闘エンジン (Combat Engine)
+// ============================================================
+const GURPS_COMBAT = {
+  woundingMod: { imp: 2.0, cut: 1.5, 'pi+': 1.5, 'pi-': 0.5, pi: 1.0, cr: 1.0, burn: 1.0, tox: 1.0, fat: 1.0, spec: 1.0 },
+  damageRoll: function(diceExpr) {
+    // '1d', '2d', '1d-2', '2d+1' etc.
+    var m = diceExpr.match(/^(\d+)d([+-]\d+)?$/);
+    if (!m) return { total: 0, rolls: [] };
+    var count = parseInt(m[1]);
+    var mod = m[2] ? parseInt(m[2]) : 0;
+    var rolls = [];
+    var sum = 0;
+    for (var i = 0; i < count; i++) {
+      var r = Math.floor(Math.random() * 6) + 1;
+      rolls.push(r);
+      sum += r;
+    }
+    return { total: sum + mod, rolls: rolls, raw: sum, mod: mod, expr: diceExpr };
+  },
+  calcBasicDamage: function(st, mode) {
+    var diceExpr = mode === 'sw' ? GURPS_CHAR.getSwing(st) : GURPS_CHAR.getThrust(st);
+    return this.damageRoll(diceExpr);
+  },
+  calcWound: function(damage, dmgType, dr) {
+    var pen = Math.max(damage - dr, 0);
+    var mult = this.woundingMod[dmgType] || 1.0;
+    return { penetrating: pen, wound: Math.floor(pen * mult), multiplier: mult, dr: dr };
+  },
+  getParry: function(skillLevel) { return Math.floor(skillLevel / 2) + 3; },
+  getBlock: function(skillLevel) { return Math.floor(skillLevel / 2) + 3; },
+  getDodge: function(bs, encLevel) {
+    var encMods = [0, -1, -2, -3, -4];
+    return Math.floor(bs) + 3 + (encMods[encLevel] || 0);
+  },
+  // 衝撃ペナルティ: 負傷HP分（最大-4）
+  getShock: function(hpLost) { return Math.min(hpLost, 4); }
+};
+
+// ============================================================
+// MODULE 4: NPC管理 (NPC Manager)
+// ============================================================
+const GURPS_NPC = {
+  create: function(name, stats) {
+    var npc = { name: name, id: Date.now() + Math.random() };
+    npc.st = (stats && stats.st) || 10;
+    npc.dx = (stats && stats.dx) || 10;
+    npc.iq = (stats && stats.iq) || 10;
+    npc.ht = (stats && stats.ht) || 10;
+    npc.hp = (stats && stats.hp) || npc.st;
+    npc.hpMax = npc.hp;
+    npc.fp = (stats && stats.fp) || npc.ht;
+    npc.fpMax = npc.fp;
+    npc.will = (stats && stats.will) || npc.iq;
+    npc.per = (stats && stats.per) || npc.iq;
+    npc.skills = (stats && stats.skills) || [];
+    npc.dr = (stats && stats.dr) || 0;
+    return npc;
+  },
+  updateDerived: function(npc) {
+    var bs = GURPS_CHAR.getBasicSpeed(npc.dx, npc.ht);
+    npc.basicSpeed = bs;
+    npc.dodge = GURPS_CHAR.getDodge(bs);
+    npc.basicMove = GURPS_CHAR.getBasicMove(bs);
+    npc.bl = GURPS_CHAR.getBL(npc.st);
+  },
+  rollSkill: function(npc, skillName, mods) {
+    var skill = null;
+    for (var i = 0; i < npc.skills.length; i++) {
+      if (npc.skills[i].name === skillName) { skill = npc.skills[i]; break; }
+    }
+    var level = skill ? GURPS_CHAR.skillLevel(skill) : 10;
+    return GURPS_CORE.successRoll(level, mods);
+  }
+};
+
+// ============================================================
+const STATE_DEFAULTS = {
+  apiKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free',
+  char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false
+};
+// ============================================================
+const STORAGE_KEY = 'gurps_ai_trpg_state';
+
+let state = {
+  apiKey: '',
+  model: 'meta-llama/llama-3.3-70b-instruct:free',
+  char: GURPS_CHAR.fresh(),
+  skills: [],
+  advantages: [],
+  npcs: [],
+  customSettings: [],
+  messages: [],
+  worldCreated: false
+};
+
+let isStreaming = false;
+let selectedTags = new Set();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      state.apiKey = saved.apiKey || '';
+      state.model = saved.model || 'meta-llama/llama-3.3-70b-instruct:free';
+      if (state.model === 'openrouter/free') state.model = 'meta-llama/llama-3.3-70b-instruct:free';
+      state.char = saved.char || GURPS_CHAR.fresh();
+      if (state.char.nameLocked === undefined) state.char.nameLocked = false;
+      if (state.char.totalCp === undefined) state.char.totalCp = 100;
+      if (state.char.will === undefined) state.char.will = state.char.iq;
+      if (state.char.per === undefined) state.char.per = state.char.iq;
+      if (!state.char.hpMax) state.char.hpMax = state.char.st;
+      if (!state.char.fpMax) state.char.fpMax = state.char.ht;
+      if (state.char.hp > state.char.hpMax) state.char.hp = state.char.hpMax;
+      if (state.char.fp > state.char.fpMax) state.char.fp = state.char.fpMax;
+      state.skills = saved.skills || [];
+      if (state.skills.length && state.skills[0].value !== undefined && state.skills[0].cp === undefined) {
+        state.skills = [];
+      }
+      state.advantages = saved.advantages || [];
+      state.npcs = saved.npcs || [];
+      state.customSettings = saved.customSettings || [];
+      state.messages = saved.messages || [];
+      state.worldCreated = saved.worldCreated || false;
+    } else {
+      Object.assign(state, {
+        apiKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free',
+        char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false
+      });
+    }
+  } catch (e) {
+    state.skills = []; state.npcs = []; state.customSettings = []; state.messages = []; state.worldCreated = false;
+  }
+  updateNameLockUI();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function $el(id) { return document.getElementById(id); }
+
+function updateCpDisplay() {
+  var used = GURPS_CHAR.calcTotalUsedCp();
+  state.char.usedCp = used;
+  var free = state.char.totalCp - used;
+  $el('cp-total').textContent = state.char.totalCp;
+  $el('cp-used').textContent = used;
+  $el('cp-free').textContent = free;
+}
+
+function updateNameLockUI() {
+  var nameInput = $el('char-name');
+  var lockBtn = $el('name-lock-btn');
+  nameInput.value = state.char.name;
+  nameInput.disabled = state.char.nameLocked;
+  nameInput.className = state.char.nameLocked
+    ? 'flex-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 cursor-not-allowed'
+    : 'flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400';
+  lockBtn.innerHTML = state.char.nameLocked
+    ? '<i data-lucide="lock" class="w-3 h-3"></i>'
+    : '<i data-lucide="unlock" class="w-3 h-3"></i>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  updateChatModeBtn();
+}
+
+function updateChatModeBtn() {
+  var btn = $el('chat-mode-btn');
+  if (!btn) return;
+  var isPc = chatMode === 'pc';
+  if (state.char.name && !state.char.nameLocked) {
+    btn.textContent = isPc ? 'PC' : 'PL';
+    btn.title = isPc ? 'キャラクターとして発言' : 'プレイヤーとして発言';
+  } else if (state.char.name && state.char.nameLocked) {
+    btn.textContent = isPc ? state.char.name.substring(0, 4) : 'PL';
+    btn.title = isPc ? ('キャラクター「' + state.char.name + '」として発言') : 'プレイヤーとして発言';
+  } else {
+    btn.textContent = 'PL';
+    btn.title = 'プレイヤーとして発言';
+  }
+}
+
+function updateCharDisplay() {
+  var c = state.char;
+  $el('hp-display').textContent = c.hp + '/' + c.hpMax;
+  $el('fp-display').textContent = c.fp + '/' + c.fpMax;
+  $el('stat-st').textContent = c.st;
+  $el('stat-dx').textContent = c.dx;
+  $el('stat-iq').textContent = c.iq;
+  $el('stat-ht').textContent = c.ht;
+  var bs = GURPS_CHAR.getBasicSpeed(c.dx, c.ht);
+  var bm = GURPS_CHAR.getBasicMove(bs);
+  var dodge = GURPS_CHAR.getDodge(bs);
+  var bl = GURPS_CHAR.getBL(c.st);
+  $el('stat-will').textContent = GURPS_CHAR.getWill(c);
+  $el('stat-per').textContent = GURPS_CHAR.getPer(c);
+  $el('stat-bs').textContent = bs.toFixed(2);
+  $el('stat-bm').textContent = bm;
+  $el('stat-dodge').textContent = dodge;
+  $el('stat-bl').textContent = Math.round(bl);
+  $el('stat-thr').textContent = GURPS_CHAR.getThrust(c.st);
+  $el('stat-sw').textContent = GURPS_CHAR.getSwing(c.st);
+  updateCpDisplay();
+  var hpPct = c.hpMax > 0 ? (c.hp / c.hpMax) * 100 : 0;
+  var fpPct = c.fpMax > 0 ? (c.fp / c.fpMax) * 100 : 0;
+  var hpCls = 'block w-full text-center text-sm font-semibold py-0.5 ';
+  var fpCls = 'block w-full text-center text-sm font-semibold py-0.5 ';
+  hpCls += hpPct <= 25 ? 'text-red-600 dark:text-red-400' : hpPct <= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300';
+  fpCls += fpPct <= 25 ? 'text-red-600 dark:text-red-400' : fpPct <= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300';
+  $el('hp-display').className = hpCls;
+  $el('fp-display').className = fpCls;
+}
+
+function renderCustomRules() {
+  var section = $el('custom-rules-section');
+  var list = $el('custom-rules-list');
+  if (!section || !list) return;
+  if (!state.customSettings.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  list.innerHTML = '';
+  for (var i = 0; i < state.customSettings.length; i++) {
+    var div = document.createElement('div');
+    div.className = 'text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed py-0.5 border-b border-gray-100 dark:border-gray-800 last:border-0';
+    div.textContent = '• ' + state.customSettings[i].text;
+    list.appendChild(div);
+  }
+}
+
+function renderSkills() {
+  var container = $el('skills-list');
+  container.innerHTML = '';
+  if (!state.skills.length) {
+    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">チャットで /buy 技能名 (難度) CP と入力して購入</div>';
+    return;
+  }
+  state.skills.forEach(function(skill, i) {
+    var level = GURPS_CHAR.skillLevel(skill);
+    var diffLabel = GURPS_CHAR.skillDiffLabel[skill.diff] || '並';
+    var div = document.createElement('div');
+    div.className = 'flex items-center gap-1';
+    div.innerHTML =
+      '<span class="flex-1 text-xs text-gray-600 dark:text-gray-300 truncate">' + escHtml(skill.name) + '</span>' +
+      '<span class="text-[10px] text-gray-400 mr-0.5">' + diffLabel + '</span>' +
+      '<span class="text-xs text-gray-400 w-6 text-right">' + level + '</span>';
+    container.appendChild(div);
+  });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderAdvantages() {
+  var container = $el('advantages-list');
+  container.innerHTML = '';
+  if (!state.advantages.length) {
+    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">チャットで /buy 利:特徴名 CP または /buy 不利:特徴名 -CP と入力</div>';
+    return;
+  }
+  state.advantages.forEach(function(adv) {
+    var div = document.createElement('div');
+    div.className = 'flex items-center gap-1';
+    var isDisadv = adv.cost < 0;
+    var costLabel = isDisadv ? ('+' + Math.abs(adv.cost) + 'CP') : ('-' + adv.cost + 'CP');
+    div.innerHTML =
+      '<span class="flex-1 text-xs' + (isDisadv ? ' text-red-500' : ' text-green-600 dark:text-green-400') + ' truncate">' + escHtml(adv.name) + '</span>' +
+      '<span class="text-xs ' + (isDisadv ? 'text-red-400' : 'text-green-500') + '">' + costLabel + '</span>';
+    container.appendChild(div);
+  });
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function roll3d6() { return GURPS_CORE.roll3d6(); }
+
+function evaluateRoll(total, target) {
+  return GURPS_CORE.evaluateRoll(total, target);
+}
+
+function buildContextString(name, base, mod, roll, evalResult) {
+  return '[判定: ' + name + ' | 目標値: ' + (base + mod) + ' (基本:' + base + ' 修正:' + mod + ') | 出目: ' + roll.total + ' (' + roll.d1 + ',' + roll.d2 + ',' + roll.d3 + ') | 結果: ' + evalResult.label + ']';
+}
+
+// ============================================================
+// MODULE 3: チャットコマンド処理
+// ============================================================
+var chatMode = 'pl'; // 'pl' = プレイヤー, 'pc' = キャラクター
+
+function cycleChatMode() {
+  if (!state.char.name || state.char.nameLocked) {
+    chatMode = 'pl';
+  } else {
+    chatMode = chatMode === 'pl' ? 'pc' : 'pl';
+  }
+  updateChatModeBtn();
+}
+
+function toggleNameLock() {
+  var input = $el('char-name');
+  if (state.char.nameLocked) return;
+  var name = input.value.trim();
+  if (!name) { showToast('名前を入力してください', 'warn'); return; }
+  state.char.name = name;
+  state.char.nameLocked = true;
+  updateNameLockUI();
+  saveState();
+  showToast('キャラクター名をロックしました', '');
+}
+
+function handleBuyCommand(text) {
+  // /buy ST +1  /buy DX -1  /buy HP +2  /buy FP +1
+  // /buy 技能名 (E|A|H) CP [st|dx|iq|ht]
+  // /buy 利:特徴名 CP  /buy 不利:特徴名 -CP
+
+  // 有利/不利な特徴
+  var advMatch = text.match(/^\/buy\s+(利|有利|不利):(.+?)\s+([+-]?\d+)$/);
+  if (advMatch) {
+    var advType = advMatch[1];
+    var advName = advMatch[2].trim();
+    var advCost = parseInt(advMatch[3]);
+    if (advType === '不利') {
+      if (advCost > 0) advCost = -advCost;
+    } else {
+      if (advCost < 0) { showToast('有利な特徴は正のCPで指定', 'error'); return true; }
+    }
+    var existing = null;
+    for (var ai = 0; ai < state.advantages.length; ai++) {
+      if (state.advantages[ai].name === advName) { existing = state.advantages[ai]; break; }
+    }
+    var oldCost = existing ? existing.cost : 0;
+    var costDelta = advCost - oldCost;
+    if (!GURPS_CHAR.canAfford(costDelta)) { showToast('CPが不足しています', 'error'); return true; }
+    if (existing) {
+      existing.cost = advCost;
+      state.advantages.splice(ai, 1);
+    } else {
+      state.advantages.push({ name: advName, cost: advCost });
+    }
+    var costLabel = costDelta >= 0 ? (costDelta + 'CP消費') : (Math.abs(costDelta) + 'CP戻り');
+    addMessage('system', '【CP変更】特徴「' + advName + '」' + costLabel);
+    renderAdvantages();
+    updateCharDisplay();
+    saveState();
+    showToast('特徴「' + advName + '」を更新しました', '');
+    return true;
+  }
+
+  var attrMatch = text.match(/^\/buy\s+(ST|DX|IQ|HT|HP|FP)\s*([+-]\d+)$/);
+  if (attrMatch) {
+    var what = attrMatch[1];
+    var delta = parseInt(attrMatch[2]);
+    if (what === 'ST' || what === 'DX' || what === 'IQ' || what === 'HT') {
+      var attr = what.toLowerCase();
+      var newVal = state.char[attr] + delta;
+      if (newVal < 1 || newVal > 20) { showToast(what + 'は1～20の範囲です', 'error'); return; }
+      var cpDelta = GURPS_CHAR.calcAttrCpDelta(attr, newVal);
+      if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
+      var hpDiff = state.char.hpMax - state.char.st;
+      var fpDiff = state.char.fpMax - state.char.ht;
+      state.char[attr] = newVal;
+      state.char.hpMax = state.char.st + Math.max(0, hpDiff);
+      state.char.fpMax = state.char.ht + Math.max(0, fpDiff);
+      if (state.char.hp > state.char.hpMax) state.char.hp = state.char.hpMax;
+      if (state.char.fp > state.char.fpMax) state.char.fp = state.char.fpMax;
+      var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+      addMessage('system', '【CP変更】' + what + ' ' + delta + ' (' + costLabel + ')');
+      updateCharDisplay();
+      saveState();
+      showToast(what + 'を' + delta + 'しました', '');
+      return true;
+    }
+    if (what === 'HP') {
+      var newHpMax = state.char.hpMax + delta;
+      if (newHpMax < 1 || newHpMax > 40) { showToast('HPは1～40の範囲です', 'error'); return; }
+      var cpDelta = GURPS_CHAR.calcHpCpDelta(newHpMax);
+      if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
+      state.char.hpMax = newHpMax;
+      if (state.char.hp > state.char.hpMax) state.char.hp = state.char.hpMax;
+      state.char.hp = Math.min(state.char.hp, state.char.hpMax);
+      var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+      addMessage('system', '【CP変更】HP上限 ' + delta + ' (' + costLabel + ')');
+      updateCharDisplay();
+      saveState();
+      showToast('HP上限を' + delta + 'しました', '');
+      return true;
+    }
+    if (what === 'FP') {
+      var newFpMax = state.char.fpMax + delta;
+      if (newFpMax < 1 || newFpMax > 40) { showToast('FPは1～40の範囲です', 'error'); return; }
+      var cpDelta = GURPS_CHAR.calcFpCpDelta(newFpMax);
+      if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
+      state.char.fpMax = newFpMax;
+      if (state.char.fp > state.char.fpMax) state.char.fp = state.char.fpMax;
+      state.char.fp = Math.min(state.char.fp, state.char.fpMax);
+      var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+      addMessage('system', '【CP変更】FP上限 ' + delta + ' (' + costLabel + ')');
+      updateCharDisplay();
+      saveState();
+      showToast('FP上限を' + delta + 'しました', '');
+      return true;
+    }
+  }
+  // /buy 技能名 (E|A|H) CP [st|dx|iq|ht]
+  var skillMatch = text.match(/^\/buy\s+(.+?)\s+(E|A|H)\s+(\d+)(?:\s+(st|dx|iq|ht))?$/);
+  if (!skillMatch) skillMatch = text.match(/^\/buy\s+(.+?)\s+(\d+)(?:\s+(st|dx|iq|ht))?$/);
+  if (skillMatch) {
+    var skillName = skillMatch[1].trim();
+    var diff = skillMatch[2] || 'A';
+    var cp = parseInt(skillMatch[3] || skillMatch[2]);
+    var skillAttr = skillMatch[4] || 'iq';
+    if (!GURPS_CHAR.skillCpToLevel[diff]) { showToast('難度は E(易)/A(並)/H(難) のいずれか', 'error'); return true; }
+    var validCps = GURPS_CHAR.skillLevels;
+    var found = false;
+    for (var ci = 0; ci < validCps.length; ci++) {
+      if (validCps[ci] === cp) { found = true; break; }
+    }
+    if (!found || cp === 0) {
+      showToast('技能CPは ' + validCps.filter(function(v){return v>0;}).join('/') + ' のいずれか', 'error');
+      return true;
+    }
+    var existing = null;
+    for (var si = 0; si < state.skills.length; si++) {
+      if (state.skills[si].name === skillName) { existing = state.skills[si]; break; }
+    }
+    var oldCp = existing ? existing.cp : 0;
+    var cpDelta = cp - oldCp;
+    if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return true; }
+    if (existing) {
+      existing.cp = cp;
+      existing.attr = skillAttr;
+    } else {
+      state.skills.push({ name: skillName, diff: diff, cp: cp, attr: skillAttr });
+    }
+    var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+    addMessage('system', '【CP変更】技能「' + skillName + '」(' + GURPS_CHAR.skillDiffLabel[diff] + '/' + skillAttr.toUpperCase() + ') ' + costLabel);
+    renderSkills();
+    renderAdvantages();
+    updateCharDisplay();
+    saveState();
+    showToast('技能「' + skillName + '」を更新しました', '');
+    return true;
+  }
+  return false;
+}
+
+function addMessage(role, content) {
+  state.messages.push({ id: Date.now() + Math.random(), role: role, content: content, ts: Date.now() });
+  if (state.messages.length > 200) state.messages.splice(0, 50);
+}
+
+function processStatusTags(text) {
+  var regex = /\[(HP|FP):([+-]?\d+)\]/g;
+  var match, updated = false;
+  while ((match = regex.exec(text)) !== null) {
+    var stat = match[1], delta = parseInt(match[2]);
+    if (stat === 'HP') { var n = Math.max(0, Math.min(state.char.hpMax, state.char.hp + delta)); if (n !== state.char.hp) updated = true; state.char.hp = n; }
+    else if (stat === 'FP') { var n = Math.max(0, Math.min(state.char.fpMax, state.char.fp + delta)); if (n !== state.char.fp) updated = true; state.char.fp = n; }
+  }
+  if (updated) { updateCharDisplay(); saveState(); }
+}
+
+function highlightTags(text) {
+  return text.replace(/\[(HP|FP):([+-]?\d+)\]/g, function(m, s, v) {
+    return '<span class="' + (v.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') + ' font-bold text-xs">[' + s + ':' + v + ']</span>';
+  });
+}
+
+function renderChat() {
+  var log = $el('chat-log');
+  if (!state.messages.length) {
+    log.innerHTML =
+      '<div class="flex flex-col items-center justify-center h-full select-none">' +
+        '<div class="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 flex items-center justify-center mb-4">' +
+          '<i data-lucide="earth" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>' +
+        '</div>' +
+        '<p class="text-sm text-gray-400 mb-1">まだ世界が創造されていません</p>' +
+        '<p class="text-xs text-gray-400/70 mb-4">「世界創成」ボタンから、あなただけの世界を創りましょう</p>' +
+        '<button onclick="showWorldModal()" class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg transition-colors shadow-sm"><i data-lucide="globe" class="w-4 h-4"></i>世界を創造する</button>' +
+      '</div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < state.messages.length; i++) {
+    var msg = state.messages[i];
+    if (msg.role === 'player') {
+      var playerName = 'プレイヤー';
+      var playerContent = msg.content;
+      var playerNpcMatch = msg.content.match(/^【(.+?)】/);
+      if (playerNpcMatch) {
+        playerName = playerNpcMatch[1] + '（プレイヤー）';
+        playerContent = msg.content.substring(playerNpcMatch[0].length).trim();
+      }
+      html += '<div class="flex justify-end msg-anim">' +
+        '<div class="max-w-[80%] sm:max-w-[70%]">' +
+        '<div class="text-right text-[10px] text-blue-600 dark:text-blue-400 font-semibold mb-0.5 px-1">' + playerName + '</div>' +
+        '<div class="bg-blue-500 dark:bg-blue-700 text-white rounded-xl rounded-br-sm px-3.5 py-2 text-sm leading-relaxed">' + escHtml(playerContent) + '</div>' +
+        '</div></div>';
+    } else if (msg.role === 'gm') {
+      var gmName = 'マスター';
+      var gmContent = msg.content;
+      var npcMatch = msg.content.match(/^【(.+?)】/);
+      if (npcMatch) {
+        gmName = npcMatch[1] + '（マスター）';
+        gmContent = msg.content.substring(npcMatch[0].length).trim();
+      }
+      html += '<div class="flex justify-start msg-anim">' +
+        '<div class="max-w-[85%] sm:max-w-[75%]">' +
+        '<div class="text-[10px] text-gray-500 dark:text-gray-400 font-semibold mb-0.5 px-1">' + gmName + '</div>' +
+        '<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl rounded-bl-sm px-3.5 py-2 text-sm leading-relaxed gm-msg shadow-sm">' + highlightTags(typeof marked !== 'undefined' ? marked.parse(gmContent) : escHtml(gmContent)) + '</div>' +
+        '</div></div>';
+    } else if (msg.role === 'system') {
+      html += '<div class="flex justify-center msg-anim"><div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 text-amber-700 dark:text-amber-300 rounded-lg px-3 py-1.5 text-xs leading-relaxed text-center max-w-[90%]">' + escHtml(msg.content) + '</div></div>';
+    }
+  }
+  log.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  requestAnimationFrame(function() { $el('chat-log').scrollTop = $el('chat-log').scrollHeight; });
+}
+
+function showLoading(show) {
+  var el = $el('loading-indicator');
+  if (!el) return;
+  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+  isStreaming = show;
+  $el('send-btn').disabled = show;
+}
+
+function showToast(msg, type) {
+  var existing = document.querySelector('.toast-msg');
+  if (existing) existing.remove();
+  var div = document.createElement('div');
+  var cls = 'toast-msg fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg text-sm shadow-lg msg-anim ';
+  if (type === 'error') cls += 'bg-red-50 dark:bg-red-900/80 border border-red-200 dark:border-red-700/50 text-red-700 dark:text-red-200';
+  else if (type === 'warn') cls += 'bg-yellow-50 dark:bg-yellow-900/80 border border-yellow-200 dark:border-yellow-700/50 text-yellow-700 dark:text-yellow-200';
+  else cls += 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300';
+  div.className = cls;
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(function() { div.remove(); }, 4000);
+}
+
+function toggleTheme() {
+  var html = document.documentElement;
+  html.classList.toggle('dark');
+  localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+  setTimeout(function() { if (typeof lucide !== 'undefined') lucide.createIcons(); }, 50);
+}
+
+function toggleSettings() {
+  var panel = $el('settings-panel');
+  var chevron = $el('settings-chevron');
+  panel.classList.toggle('hidden');
+  chevron.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+function showWorldModal() {
+  if (isStreaming) { showToast('AI GMが応答生成中です', 'warn'); return; }
+  selectedTags.clear();
+  renderModalTags();
+  $el('world-modal').classList.remove('hidden');
+  $el('world-create-btn').disabled = true;
+  $el('modal-count').textContent = '選択: 0';
+}
+
+function closeWorldModal() {
+  $el('world-modal').classList.add('hidden');
+}
+
+function renderModalTags() {
+  var container = $el('modal-tags');
+  container.innerHTML = '';
+  for (var cat in WORLD_TAGS) {
+    if (!WORLD_TAGS.hasOwnProperty(cat)) continue;
+    var section = document.createElement('div');
+    section.innerHTML = '<div class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-2 tracking-wide">' + cat + '</div>';
+    var grid = document.createElement('div');
+    grid.className = 'flex flex-wrap gap-1.5';
+    WORLD_TAGS[cat].forEach(function(tag) {
+      var chip = document.createElement('button');
+      chip.className = 'tag-chip px-2.5 py-1 text-xs rounded-md border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400';
+      chip.textContent = tag;
+      chip.onclick = function() { toggleTag(chip, tag); };
+      grid.appendChild(chip);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  }
+}
+
+function toggleTag(el, tag) {
+  if (selectedTags.has(tag)) {
+    selectedTags.delete(tag);
+    el.className = 'tag-chip px-2.5 py-1 text-xs rounded-md border bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400';
+  } else {
+    selectedTags.add(tag);
+    el.className = 'tag-chip px-2.5 py-1 text-xs rounded-md border bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-200';
+  }
+  $el('modal-count').textContent = '選択: ' + selectedTags.size;
+  $el('world-create-btn').disabled = selectedTags.size === 0;
+}
+
+async function createWorld() {
+  if (selectedTags.size === 0) return;
+  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  if (!apiKey) { showToast('APIキーを設定してください', 'warn'); closeWorldModal(); return; }
+  state.apiKey = apiKey;
+  closeWorldModal();
+
+  var tags = [];
+  selectedTags.forEach(function(t) { tags.push(t); });
+  var prompt = '【世界創成】\n以下のタグに基づき、TRPGセッションの世界を創作してください。\n\n選択されたタグ: ' + tags.join(', ') + '\n\n【重要】\n- 必ず日本語のみで出力（英単語・他言語禁止）\n- プレイヤーキャラクターが知り得ない情報は出力しないこと\n- 世界の裏設定やメタ的な説明は一切含めない\n- 「この世界では〜」「本作は〜」のような俯瞰説明は禁止\n- 今プレイヤーが見聞きできることだけを、一人称視点で描写\n\n以下の形式で出力：\n1. **世界名**（太字）\n2. 世界観の概要（2-3文、プレイヤーが知っている範囲で）\n3. あなたが今いる場所と情景描写\n4. あなたの目前で起きている出来事\n5. 最初にあなたは何をしますか？という問いかけ';
+
+  var modelName = $el('model-select').value;
+  var requestBody = {
+    model: modelName,
+    messages: [
+      { role: 'system', content: WORLD_SYSTEM_PROMPT },
+      { role: 'user', content: prompt }
+    ]
+  };
+
+  console.log('[createWorld] ==== API Request Debug ====');
+  console.log('[createWorld] Endpoint: POST https://openrouter.ai/api/v1/chat/completions');
+  console.log('[createWorld] Model:', modelName);
+  console.log('[createWorld] API Key prefix:', apiKey.substring(0, 10) + '...');
+  console.log('[createWorld] Messages count:', requestBody.messages.length);
+  console.log('[createWorld] Selected tags:', tags);
+  console.log('[createWorld] Full request body:', JSON.stringify(requestBody, null, 2));
+
+  showLoading(true);
+  try {
+    console.log('[createWorld] Sending fetch request...');
+    var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://gurps-trpg.app',
+        'X-Title': 'GURPS AI TRPG GM'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    console.log('[createWorld] Response status:', res.status, res.statusText);
+    console.log('[createWorld] Response headers:', {});
+    for (var pair of res.headers.entries()) {
+      console.log('[createWorld]   ' + pair[0] + ': ' + pair[1]);
+    }
+
+    if (!res.ok) {
+      var errBody = '';
+      try { var e = await res.json(); errBody = JSON.stringify(e, null, 2); } catch(_) { try { errBody = await res.text(); } catch(_2) {} }
+      console.log('[createWorld] ERROR Response body:', errBody);
+      var errMsg = 'APIエラー (' + res.status + ')';
+      if (res.status === 401) errMsg = '認証エラー: APIキーが無効です';
+      else if (res.status === 429) errMsg = 'レート制限: しばらく待ってから再試行してください';
+      else if (res.status === 402) errMsg = 'APIの残高が不足しています';
+      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。';
+      if (errBody) errMsg += '\n' + errBody;
+      throw new Error(errMsg);
+    }
+
+    var data = await res.json();
+    console.log('[createWorld] Success response:', JSON.stringify(data, null, 2));
+    var reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '（応答が空でした）';
+    if (!reply) reply = '（応答が空でした）';
+
+    state.worldCreated = true;
+    state.messages = [];
+    addMessage('system', '世界創成: ' + tags.join(', '));
+    addMessage('gm', reply);
+    renderChat();
+    saveState();
+    console.log('[createWorld] ==== World creation complete ====');
+
+  } catch (err) {
+    console.error('[createWorld] Fatal error:', err);
+    showToast(err.message || '世界創成に失敗しました', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function sendMessage() {
+  var input = $el('chat-input');
+  var text = input.value.trim();
+  if (!text || isStreaming) return;
+
+  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  if (!apiKey) { showToast('APIキーを入力してください', 'warn'); return; }
+  state.apiKey = apiKey;
+
+  if (text.startsWith('/buy ')) {
+    if (handleBuyCommand(text)) {
+      input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
+    }
+    return;
+  }
+
+  var npcAdd = text.match(/^\/npcadd\s+(\S+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?/);
+  if (npcAdd) {
+    var npc = GURPS_NPC.create(npcAdd[1], {
+      st: npcAdd[2] !== undefined ? parseInt(npcAdd[2]) : 10,
+      dx: npcAdd[3] !== undefined ? parseInt(npcAdd[3]) : 10,
+      iq: npcAdd[4] !== undefined ? parseInt(npcAdd[4]) : 10,
+      ht: npcAdd[5] !== undefined ? parseInt(npcAdd[5]) : 10
+    });
+    GURPS_NPC.updateDerived(npc);
+    state.npcs.push(npc);
+    addMessage('system', '【NPC生成】' + npc.name + ' (ST' + npc.st + ' DX' + npc.dx + ' IQ' + npc.iq + ' HT' + npc.ht + ')');
+    input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
+    showToast('NPC「' + npc.name + '」を生成しました', '');
+    return;
+  }
+
+  var rollCmd = text.match(/^\/roll\s+(\d+)(?:\s+([+-]\d+))?$/);
+  if (rollCmd) {
+    var base = parseInt(rollCmd[1]);
+    var mod = rollCmd[2] ? parseInt(rollCmd[2]) : 0;
+    var result = GURPS_CORE.successRoll(base, mod);
+    addMessage('system', '[判定: 目標値' + result.effective + ' | 出目:' + result.roll.total + ' (' + result.roll.d1 + ',' + result.roll.d2 + ',' + result.roll.d3 + ') | 結果:' + result.result.label + ']');
+    input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
+    return;
+  }
+
+  var ruleMatch = text.match(/^\/rule\s+(.+)/);
+  if (ruleMatch) {
+    var ruleText = ruleMatch[1].trim();
+    state.customSettings.push({ ts: Date.now(), text: ruleText });
+    addMessage('system', '【カスタムルール】' + ruleText);
+    input.value = ''; input.style.height = 'auto'; renderChat(); renderCustomRules(); saveState();
+    showToast('カスタムルールを保存しました', '');
+    return;
+  }
+
+  var npcCmd = text.match(/^\/npc\s+(\S+)\s+(.*)/);
+  if (npcCmd) {
+    text = '【' + npcCmd[1] + '】' + npcCmd[2];
+  } else if (chatMode === 'pc' && state.char.name && state.char.nameLocked) {
+    text = '【' + state.char.name + '】' + text;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('player', text);
+  renderChat();
+  saveState();
+  showLoading(true);
+
+  try {
+    var gmPrompt = SYSTEM_PROMPT_GM + GURPS_RULES_REFERENCE;
+    if (state.customSettings.length) {
+      gmPrompt += '\n\n【この世界のカスタムルール】\n';
+      for (var ri = 0; ri < state.customSettings.length; ri++) {
+        gmPrompt += '- ' + state.customSettings[ri].text + '\n';
+      }
+    }
+    if (state.char.name) {
+      var c = state.char;
+      var bs = GURPS_CHAR.getBasicSpeed(c.dx, c.ht);
+      var bm = GURPS_CHAR.getBasicMove(bs);
+      var dodge = GURPS_CHAR.getDodge(bs);
+      var bl = GURPS_CHAR.getBL(c.st);
+      gmPrompt += '\n【キャラクター】\n名前: ' + c.name + '\n筋力(ST):' + c.st + ' 敏捷性(DX):' + c.dx + ' 知力(IQ):' + c.iq + ' 生命力(HT):' + c.ht + ' 意志:' + GURPS_CHAR.getWill(c) + ' 知覚:' + GURPS_CHAR.getPer(c) + '\nHP:' + c.hp + '/' + c.hpMax + ' FP:' + c.fp + '/' + c.fpMax + '\n基本速度:' + bs.toFixed(2) + ' 移動力:' + bm + ' よけ:' + dodge + ' BL:' + Math.round(bl) + ' 突き:' + GURPS_CHAR.getThrust(c.st) + ' 振り:' + GURPS_CHAR.getSwing(c.st) + '\n未使用CP:' + (c.totalCp - GURPS_CHAR.calcTotalUsedCp());
+      if (state.skills.length) {
+        gmPrompt += '\n【技能】';
+        for (var si = 0; si < state.skills.length; si++) {
+          var sk = state.skills[si];
+          gmPrompt += '\n- ' + sk.name + ' (目標値' + GURPS_CHAR.skillLevel(sk) + ')';
+        }
+      }
+      if (state.advantages.length) {
+        gmPrompt += '\n【特徴】';
+        for (var ai = 0; ai < state.advantages.length; ai++) {
+          var a = state.advantages[ai];
+          gmPrompt += '\n- ' + a.name + ' (' + (a.cost >= 0 ? '-' + a.cost + 'CP' : '+' + (-a.cost) + 'CP') + ')';
+        }
+      }
+    }
+    if (state.npcs.length) {
+      gmPrompt += '\n【NPC一覧】';
+      for (var ni = 0; ni < state.npcs.length; ni++) {
+        var n = state.npcs[ni];
+        gmPrompt += '\n- ' + n.name + ' (ST' + n.st + ' DX' + n.dx + ' IQ' + n.iq + ' HT' + n.ht + ' HP' + n.hp + '/' + n.hpMax + ' FP' + n.fp + '/' + n.fpMax + ')';
+        if (n.skills && n.skills.length) {
+          for (var nsi = 0; nsi < n.skills.length; nsi++) {
+            gmPrompt += ' [' + n.skills[nsi].name + ':' + GURPS_CHAR.skillLevel(n.skills[nsi]) + ']';
+          }
+        }
+      }
+    }
+    var apiMessages = [{ role: 'system', content: gmPrompt }];
+    for (var i = 0; i < state.messages.length; i++) {
+      var msg = state.messages[i];
+      if (msg.role === 'player') {
+        apiMessages.push({ role: 'user', content: msg.content });
+      } else if (msg.role === 'gm') {
+        apiMessages.push({ role: 'assistant', content: msg.content.replace(/\[(HP|FP):[+-]?\d+\]/g, '').trim() });
+      } else if (msg.role === 'system') {
+        apiMessages.push({ role: 'user', content: '【情報】' + msg.content });
+      }
+    }
+    if (apiMessages.length <= 1) apiMessages.push({ role: 'user', content: text });
+
+    var modelName = $el('model-select').value;
+
+    console.log('[sendMessage] ==== API Request Debug ====');
+    console.log('[sendMessage] Message text:', text);
+    console.log('[sendMessage] Model:', modelName);
+    console.log('[sendMessage] API Key prefix:', apiKey.substring(0, 10) + '...');
+    console.log('[sendMessage] Messages in context:', apiMessages.length);
+    console.log('[sendMessage] Full request body:', JSON.stringify({ model: modelName, messages: apiMessages }, null, 2));
+
+    var res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://gurps-trpg.app',
+        'X-Title': 'GURPS AI TRPG GM'
+      },
+      body: JSON.stringify({ model: modelName, messages: apiMessages })
+    });
+
+    console.log('[sendMessage] Response status:', res.status, res.statusText);
+
+    if (!res.ok) {
+      var errBody = '';
+      try { var e = await res.json(); errBody = JSON.stringify(e, null, 2); } catch(_) { try { errBody = await res.text(); } catch(_2) {} }
+      console.log('[sendMessage] ERROR Response body:', errBody);
+      var errMsg = 'APIエラー (' + res.status + ')';
+      if (res.status === 401) errMsg = '認証エラー: APIキーが無効です';
+      else if (res.status === 429) errMsg = 'レート制限: しばらく待ってから再試行してください';
+      else if (res.status === 402) errMsg = 'APIの残高が不足しています';
+      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。';
+      if (errBody) errMsg += '\n' + errBody;
+      throw new Error(errMsg);
+    }
+
+    var data = await res.json();
+    console.log('[sendMessage] Success response:', JSON.stringify(data, null, 2));
+    var reply = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '（応答が空でした）';
+    if (!reply) reply = '（応答が空でした）';
+    if (/^(User Safety:|Response Safety:)/.test(reply.trim())) {
+      throw new Error('選択されたモデル（' + modelName + '）は現在利用できません。モデルセレクターで別のモデルを選択してください。');
+    }
+    processStatusTags(reply);
+    addMessage('gm', reply);
+    var buyLines = reply.match(/^\/buy\s+.+$/gm);
+    if (buyLines) {
+      for (var bl = 0; bl < buyLines.length; bl++) {
+        handleBuyCommand(buyLines[bl].trim());
+      }
+    }
+    renderChat();
+    saveState();
+
+  } catch (err) {
+    console.error('[sendMessage] Fatal error:', err);
+    showToast(err.message || '通信エラーが発生しました', 'error');
+  } finally {
+    showLoading(false);
+    $el('send-btn').disabled = false;
+    input.focus();
+  }
+}
+
+function resetSession() {
+  if (!confirm('セッションをリセットしますか？\nチャット履歴と世界設定が全て消去されます。')) return;
+  state.messages = [];
+  state.skills = [];
+  state.advantages = [];
+  state.npcs = [];
+  state.customSettings = [];
+  state.char = GURPS_CHAR.fresh();
+  state.worldCreated = false;
+  chatMode = 'pl';
+  updateNameLockUI();
+  updateChatModeBtn();
+  updateCharDisplay();
+  renderSkills();
+  renderAdvantages();
+  renderChat();
+  saveState();
+  showToast('セッションをリセットしました', '');
+}
+
+function buildSessionText() {
+  var lines = [];
+  var date = new Date().toISOString().slice(0, 10);
+  lines.push('========================================');
+  lines.push(' GURPS AI TRPG GM - セッションログ');
+  lines.push(' ' + date);
+  lines.push('========================================');
+  lines.push('');
+  lines.push('【キャラクター】');
+  var c = state.char;
+  var cName = c.name || '（未設定）';
+  var bs = GURPS_CHAR.getBasicSpeed(c.dx, c.ht);
+  lines.push('  名前: ' + cName);
+  lines.push('  CP: 総' + c.totalCp + ' / 使用' + GURPS_CHAR.calcTotalUsedCp() + ' / 未使用' + (c.totalCp - GURPS_CHAR.calcTotalUsedCp()));
+  lines.push('  筋力(ST):' + c.st + '  敏捷性(DX):' + c.dx + '  知力(IQ):' + c.iq + '  生命力(HT):' + c.ht);
+  lines.push('  意志:' + GURPS_CHAR.getWill(c) + '  知覚:' + GURPS_CHAR.getPer(c) + '  基本速度:' + bs.toFixed(2) + '  移動力:' + GURPS_CHAR.getBasicMove(bs) + '  よけ:' + GURPS_CHAR.getDodge(bs));
+  lines.push('  HP:' + c.hp + '/' + c.hpMax + '  FP:' + c.fp + '/' + c.fpMax + '  BL:' + Math.round(GURPS_CHAR.getBL(c.st)));
+  lines.push('  突き:' + GURPS_CHAR.getThrust(c.st) + '  振り:' + GURPS_CHAR.getSwing(c.st));
+  lines.push('');
+  lines.push('【技能】');
+  if (state.skills.length) {
+    for (var si = 0; si < state.skills.length; si++) {
+      var s = state.skills[si];
+      var lv = GURPS_CHAR.skillLevel(s);
+      var dl = GURPS_CHAR.skillDiffLabel[s.diff] || '並';
+      lines.push('  ' + s.name + ' (' + dl + ') : 目標値' + lv + ' (CP' + s.cp + ')');
+    }
+  } else {
+    lines.push('  （未取得）');
+  }
+  if (state.advantages.length) {
+    lines.push('');
+    lines.push('【特徴】');
+    for (var ai = 0; ai < state.advantages.length; ai++) {
+      var a = state.advantages[ai];
+      lines.push('  ' + a.name + ' (' + (a.cost >= 0 ? '-' + a.cost + 'CP' : '+' + (-a.cost) + 'CP') + ')');
+    }
+  }
+  if (state.npcs.length) {
+    lines.push('');
+    lines.push('【NPC】');
+    for (var ni = 0; ni < state.npcs.length; ni++) {
+      var n = state.npcs[ni];
+      lines.push('  ' + n.name + ' (ST' + n.st + ' DX' + n.dx + ' IQ' + n.iq + ' HT' + n.ht + ' HP' + n.hp + '/' + n.hpMax + '/' + (-n.st*5) + ')');
+    }
+  }
+  lines.push('');
+  lines.push('【セッションログ】');
+  lines.push('────────────────────────────────────────');
+  lines.push('');
+
+  for (var i = 0; i < state.messages.length; i++) {
+    var msg = state.messages[i];
+    if (msg.role === 'system') {
+      lines.push('【' + msg.content + '】');
+      lines.push('');
+    } else if (msg.role === 'player') {
+      var pName = 'プレイヤー';
+      var pContent = msg.content;
+      var pMatch = msg.content.match(/^【(.+?)】/);
+      if (pMatch) {
+        pName = pMatch[1] + '（プレイヤー）';
+        pContent = msg.content.substring(pMatch[0].length).trim();
+      }
+      lines.push('■ ' + pName);
+      lines.push(pContent);
+      lines.push('');
+    } else if (msg.role === 'gm') {
+      var gmName = 'マスター';
+      var gmContent = msg.content;
+      var npcMatch = msg.content.match(/^【(.+?)】/);
+      if (npcMatch) {
+        gmName = npcMatch[1] + '（マスター）';
+        gmContent = msg.content.substring(npcMatch[0].length).trim();
+      }
+      var plainText = gmContent
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/\[(HP|FP):[+-]?\d+\]/g, '');
+      lines.push('■ ' + gmName);
+      lines.push(plainText);
+      lines.push('');
+    }
+  }
+
+  lines.push('────────────────────────────────────────');
+  lines.push('【セッション終了】');
+  return lines.join('\n');
+}
+
+function saveLogTxt() {
+  if (!state.messages.length) { showToast('ログが空です', 'warn'); return; }
+  var text = buildSessionText();
+  var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gurps_session_' + new Date().toISOString().slice(0, 10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('セッションログを保存しました', '');
+}
+
+function saveLogJson() {
+  if (!state.messages.length) { showToast('ログが空です', 'warn'); return; }
+  var blob = new Blob([JSON.stringify({ version: 1, savedAt: new Date().toISOString(), state: state }, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gurps_log_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('JSONログを保存しました', '');
+}
+
+function loadLog(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (data.state) {
+        state.messages = data.state.messages || [];
+        if (data.state.char) {
+          state.char = data.state.char;
+          if (!state.char.hpMax) state.char.hpMax = state.char.st;
+          if (!state.char.fpMax) state.char.fpMax = state.char.ht;
+          if (state.char.nameLocked === undefined) state.char.nameLocked = false;
+          if (!state.char.totalCp) state.char.totalCp = 100;
+        }
+        state.skills = data.state.skills || [];
+        state.advantages = data.state.advantages || [];
+        state.npcs = data.state.npcs || [];
+        state.customSettings = data.state.customSettings || [];
+        state.worldCreated = data.state.worldCreated || false;
+        updateNameLockUI();
+        updateChatModeBtn();
+        updateCharDisplay();
+        renderSkills();
+        renderAdvantages();
+        renderChat();
+        saveState();
+        showToast('ログを読み込みました', '');
+      } else { showToast('無効なログファイルです', 'error'); }
+    } catch (err) { showToast('ファイルの読み込みに失敗しました', 'error'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function toggleSidebar() {
+  var sidebar = $el('sidebar');
+  var overlay = $el('sidebar-overlay');
+  var isOpen = !sidebar.classList.contains('-translate-x-full');
+  sidebar.classList.toggle('-translate-x-full');
+  overlay.classList.toggle('hidden');
+  document.body.classList.toggle('overflow-hidden', !isOpen);
+}
+
+function init() {
+  console.log('[init] ==== GURPS AI TRPG GM Startup ====');
+  console.log('[init] User Agent:', navigator.userAgent);
+  console.log('[init] Platform:', navigator.platform);
+  console.log('[init] Protocol:', window.location.protocol);
+  console.log('[init] Origin:', window.location.origin);
+  console.log('[init] localStorage available:', typeof localStorage !== 'undefined');
+
+  var savedTheme = localStorage.getItem('theme');
+  console.log('[init] Saved theme:', savedTheme);
+  if (savedTheme === 'light') document.documentElement.classList.remove('dark');
+  else if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+  else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.classList.remove('dark');
+  console.log('[init] Current theme:', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+
+  loadState();
+  console.log('[init] State loaded, API key set:', state.apiKey ? 'yes (len=' + state.apiKey.length + ')' : 'no');
+  console.log('[init] State model:', state.model);
+  console.log('[init] Messages count:', state.messages.length);
+  console.log('[init] World created:', state.worldCreated);
+  console.log('[init] Character:', JSON.stringify(state.char));
+
+  $el('api-key').value = state.apiKey;
+
+  var modelSelect = $el('model-select');
+  modelSelect.value = state.model;
+  if (!modelSelect.value) {
+    modelSelect.selectedIndex = 0;
+    state.model = modelSelect.value;
+    saveState();
+    console.log('[init] Model was invalid, reset to:', modelSelect.value);
+  } else {
+    console.log('[init] Model:', modelSelect.value);
+  }
+  updateNameLockUI();
+  updateChatModeBtn();
+  updateCharDisplay();
+  renderSkills();
+  renderAdvantages();
+  renderCustomRules();
+  if (state.messages.length) renderChat();
+
+  $el('char-name').addEventListener('change', function() {
+    if (state.char.nameLocked) return;
+    state.char.name = this.value.trim();
+    updateChatModeBtn();
+    saveState();
+  });
+
+  $el('api-key').addEventListener('input', function() { state.apiKey = this.value; saveState(); });
+  $el('model-select').addEventListener('change', function() { state.model = this.value; saveState(); });
+
+  var chatInput = $el('chat-input');
+  chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+    $el('send-btn').disabled = !this.value.trim();
+  });
+  chatInput.addEventListener('focus', scrollToBottom);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('[DOM] DOMContentLoaded fired');
+  console.log('[DOM] lucide available:', typeof lucide !== 'undefined');
+  console.log('[DOM] marked available:', typeof marked !== 'undefined');
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+    console.log('[DOM] Lucide icons initialized');
+  }
+  if (typeof marked !== 'undefined') {
+    console.log('[DOM] Marked version:', marked.version || 'unknown');
+  }
+  init();
+  console.log('[DOM] ==== Initialization complete ====');
+});
+</script>
+</body>
+</html>
