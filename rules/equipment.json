@@ -1,0 +1,49 @@
+{
+  "tlWealth": [
+    { "tl": 0,  "era": "石器時代", "startingWealth": 250 },
+    { "tl": 1,  "era": "青銅器時代", "startingWealth": 500 },
+    { "tl": 2,  "era": "鉄器時代", "startingWealth": 750 },
+    { "tl": 3,  "era": "中世", "startingWealth": 1000 },
+    { "tl": 4,  "era": "大航海時代", "startingWealth": 2000 },
+    { "tl": 5,  "era": "産業革命", "startingWealth": 5000 },
+    { "tl": 6,  "era": "機械化時代", "startingWealth": 10000 },
+    { "tl": 7,  "era": "原子力時代", "startingWealth": 15000 },
+    { "tl": 8,  "era": "デジタル時代", "startingWealth": 20000 },
+    { "tl": 9,  "era": "マイクロテク時代", "startingWealth": 30000 },
+    { "tl": 10, "era": "ロボット時代", "startingWealth": 50000 },
+    { "tl": 11, "era": "エキゾチック物質時代", "startingWealth": 75000 },
+    { "tl": 12, "era": "SF超未来", "startingWealth": 100000 }
+  ],
+  "armors": [
+    { "name": "布鎧", "dr": 1, "cost": 150, "weight": 12.0 },
+    { "name": "革鎧", "dr": 2, "cost": 340, "weight": 19.5 },
+    { "name": "軽スケイル", "dr": 3, "cost": 610, "weight": 49.0 },
+    { "name": "メイル", "dr": 4, "cost": 645, "weight": 58.0 },
+    { "name": "板金ラミネート", "dr": 5, "cost": 1360, "weight": 64.0 },
+    { "name": "プレート", "dr": 6, "cost": 4040, "weight": 89.5 },
+    { "name": "フラックジャケット", "dr": 7, "cost": 500, "weight": 20.0 },
+    { "name": "防弾ベスト", "dr": 8, "cost": 400, "weight": 2.0 },
+    { "name": "タクティカルベスト", "dr": 12, "cost": 900, "weight": 9.0 }
+  ],
+  "shields": [
+    { "name": "小盾", "db": 1, "cost": 40, "weight": 8.0 },
+    { "name": "中盾", "db": 2, "cost": 60, "weight": 15.0 },
+    { "name": "大盾", "db": 3, "cost": 90, "weight": 25.0 }
+  ],
+  "wealthLevels": [
+    { "name": "どん底", "cp": -25, "multiplier": 0 },
+    { "name": "貧乏", "cp": -15, "multiplier": 0.2 },
+    { "name": "苦しい", "cp": -10, "multiplier": 0.5 },
+    { "name": "並", "cp": 0, "multiplier": 1.0 },
+    { "name": "裕福", "cp": 10, "multiplier": 2.0 },
+    { "name": "大富豪", "cp": 20, "multiplier": 5.0 },
+    { "name": "超大富豪", "cp": 30, "multiplier": 20.0 },
+    { "name": "大財閥", "cp": 50, "multiplier": 100.0 }
+  ],
+  "languages": [
+    { "level": "不可", "spokenCp": 0, "writtenCp": 0, "penalty": null },
+    { "level": "片言", "spokenCp": 1, "writtenCp": 1, "penalty": -3 },
+    { "level": "訛あり", "spokenCp": 2, "writtenCp": 2, "penalty": -1 },
+    { "level": "母語", "spokenCp": 3, "writtenCp": 3, "penalty": 0 }
+  ]
+}

@@ -1,61 +1,221 @@
 {
-  "successRoll": {
-    "description": "3D6の合計 <= 実効スキルで成功",
-    "promptLines": [
-      "■ 成功判定（3D6）",
-      "- 3D6の合計 <= 実効スキルで成功",
-      "- クリティカル成功: 出目3-4は常に成功。実効スキル15以上で出目5も、16以上で出目6も成功。",
-      "- クリティカル失敗: 出目18は常に失敗。スキル15以下で出目17も失敗。スキルより10以上高い出目も失敗。",
-      "- 成功比（Margin）= 実効スキル - 出目",
-      "",
-      "■ 対抗判定（Quick Contest）",
-      "- 両者成功判定、成功比が高い方が勝利"
-    ]
+  "turnSequence": {
+    "length": "1秒",
+    "order": "基本速度降順",
+    "tiebreaker": "DX高い方→ダイス",
+    "structure": ["防御リセット", "動作選択", "動作実行"]
   },
-  "damageTable": {
-    "promptLines": [
-      "■ ST別基本ダメージ",
-      "  ST | 突き(Thr) | 振り(Sw)",
-      "  10 | 1d-2      | 1d",
-      "  11 | 1d-1      | 1d+1",
-      "  12 | 1d-1      | 1d+2",
-      "  13 | 1d        | 2d-1",
-      "  14 | 1d        | 2d"
+
+  "maneuvers": [
+    { "name": "何もしない", "move": false, "attack": false, "defense": true, "note": "気絶/朦朧/転倒中" },
+    { "name": "移動", "move": "full", "attack": false, "defense": true, "note": "全移動力分移動" },
+    { "name": "姿勢変更", "move": true, "attack": false, "defense": true, "note": "立/屈/膝/座/這/伏" },
+    { "name": "照準", "move": "step", "attack": false, "defense": true, "note": "次ターン攻撃にAcc加算" },
+    { "name": "観察", "move": "step", "attack": false, "defense": true, "note": "近接標的観察、次ターン+1(max+3)" },
+    { "name": "攻撃", "move": "step", "attack": true, "defense": true, "note": "準備済み武器で1回" },
+    { "name": "フェイント", "move": "step", "attack": "alternate", "defense": true, "note": "対抗判定、勝利度=次ターン相手防御-", "opposed": true },
+    { "name": "全力攻撃", "move": "half", "attack": true, "defense": false, "subtypes": [
+      { "name": "必中", "effect": "命中+4(遠隔+1)" },
+      { "name": "二回", "effect": "同標的に2回攻撃" },
+      { "name": "フェイント即", "effect": "フェイント→即攻撃" },
+      { "name": "渾身", "effect": "近接DMG+2 or +1/ダイス" },
+      { "name": "制圧射撃", "effect": "RoF5+連射で面制圧" }
+    ]},
+    { "name": "全力防御", "move": "half", "attack": false, "defense": true, "subtypes": [
+      { "name": "防御増加", "effect": "特定防御+2" },
+      { "name": "二重防御", "effect": "一回の攻撃に2種防御" }
+    ]},
+    { "name": "移動攻撃", "move": "full", "attack": true, "defense": "noParry", "penalties": { "hit": -4, "maxSkill": 9 }, "note": "移動しながら攻撃、受け不可" },
+    { "name": "集中", "move": "step", "attack": false, "defense": true, "note": "呪文/知的作業、負傷でWill-3中断" },
+    { "name": "準備", "move": "step", "attack": false, "defense": true, "note": "武器抜く/装填/構え直し" },
+    { "name": "待機", "move": false, "attack": "held", "defense": true, "note": "トリガー設定→割込行動" }
+  ],
+
+  "posture": {
+    "standing": { "attack": 0, "defense": 0, "shot": 0, "moveMult": 1.0 },
+    "crouching": { "attack": -2, "defense": 0, "shot": -2, "moveMult": 0.667, "label": "屈み" },
+    "kneeling": { "attack": -2, "defense": -2, "shot": -2, "moveMult": 0.333, "label": "膝立ち" },
+    "crawling": { "attack": -4, "defense": -3, "shot": -2, "moveMult": 0.333, "label": "這い" },
+    "sitting": { "attack": -2, "defense": -2, "shot": -2, "moveMult": 0, "label": "座り" },
+    "lying":  { "attack": -4, "defense": -3, "shot": -2, "moveMult": 0.333, "moveOverride": "1yd/秒固定", "label": "伏せ" }
+  },
+
+  "senseRolls": {
+    "vision": "知覚+修正（遠距離/暗闇）",
+    "hearing": "知覚+修正(Stealth対抗/背後察知)",
+    "tasteSmell": "知覚（毒検知など）",
+    "alternate": "「観察」や「捜索」技能が知覚の代用可"
+  },
+
+  "frightChecks": {
+    "stat": "will",
+    "success": "効果なし",
+    "failure": "失敗比+2d秒間朦朧",
+    "criticalFailure": "気絶または精神的後遺症"
+  },
+
+  "hitLocations": {
+    "torso": { "penalty": 0, "note": "標準" },
+    "limb": { "penalty": -2, "note": "腕/足" },
+    "extremity": { "penalty": -4, "note": "手/足首" },
+    "face": { "penalty": -5, "note": "顔" },
+    "head": { "penalty": -7, "note": "頭/頸、DR+2、ダメ×4" },
+    "eye": { "penalty": -9, "note": "目" },
+    "joint": { "penalty": -10, "note": "鎧の隙間" }
+  },
+
+  "activeDefenses": {
+    "dodge":  { "formula": "BS + 3 - 重荷修正 + 盾DB" },
+    "parry":  { "formula": "floor(技能/2) + 3 + 盾DB" },
+    "parryModifiers": [
+      { "condition": "ナイフ/短剣", "penalty": -1 },
+      { "condition": "棒/クォータースタッフ", "bonus": 2 },
+      { "condition": "素手で武器を受ける", "penalty": -3 },
+      { "condition": "累積(2回目以降同武器)", "penalty": -4, "weaponMaster": -2 }
     ],
-    "thrust": [0,0,0,0,0,0,0,"1d-3","1d-2","1d-2","1d-2","1d-1","1d-1","1d","1d","1d+1","1d+1","1d+2","1d+2","2d-1","2d-1"],
-    "swing": [0,0,0,0,0,0,0,"1d-1","1d","1d","1d+1","1d+2","1d+2","2d-1","2d","2d","2d+1","2d+2","2d+2","3d-1","3d-1"]
+    "block":  { "formula": "floor(盾技能/2) + 3 + 盾DB", "note": "1回/ターン" }
   },
-  "combat": {
-    "promptLines": [
-      "■ 戦闘",
-      "- 攻撃: 武器スキルで命中判定（3D6 <= 技能レベル）",
-      "- 能動防御（1回/ターン）:",
-      "  - よけ: 基本速度+3 - 重荷修正",
-      "  - 受け: (技能/2)+3（切捨て）",
-      "  - 止め: (盾技能/2)+3（切捨て）",
-      "- 負傷倍率: 刺し×2.0, 切り×1.5, 叩き×1.0, 大型貫通×1.5, 小口径×0.5",
-      "- 防護点(DR): 減算後、負傷倍率適用"
+
+  "defenseOptions": {
+    "retreatDodge": 3,
+    "retreatParryFencing": 3,
+    "retreatParryOther": 1,
+    "retreatBlock": 1,
+    "dodgeAndDrop": 3,
+    "acrobaticDodgeSuccess": 2,
+    "acrobaticDodgeFailure": -2
+  },
+
+  "defenseModifiers": {
+    "stunned": -4,
+    "allOutDefense": 2,
+    "backAttack": "不可",
+    "invisible": { "hearingSuccess": -4, "hearingFail": "不可" }
+  },
+
+  "hitModifiers": {
+    "common": [
+      { "condition": "悪い足場", "penalty": -2 },
+      { "condition": "逆手攻撃", "penalty": -4 },
+      { "condition": "ST不足（1ポイント毎）", "penalty": -1 }
+    ],
+    "ssrTable": true,
+    "sm": true,
+    "aimLonger": { "1秒": 0, "2秒": 1, "3秒+": 2 }
+  },
+
+  "ssrTable": [
+    { "linearMeasurement": 2, "penalty": 0 },
+    { "linearMeasurement": 3, "penalty": -1 },
+    { "linearMeasurement": 5, "penalty": -2 },
+    { "linearMeasurement": 7, "penalty": -3 },
+    { "linearMeasurement": 10, "penalty": -4 },
+    { "linearMeasurement": 15, "penalty": -5 },
+    { "linearMeasurement": 20, "penalty": -6 },
+    { "linearMeasurement": 30, "penalty": -7 },
+    { "linearMeasurement": 50, "penalty": -8 },
+    { "linearMeasurement": 70, "penalty": -9 },
+    { "linearMeasurement": 100, "penalty": -10 }
+  ],
+
+  "specialWeaponEffects": {
+    "armorDivisor": "DRを指定数値で割る（例: (2)=DR/2）",
+    "halfDamageRange": "1/2D超過時、基本ダメージを半分(切捨)",
+    "recoil": "連射武器。Rcl値毎に出目の差で+1発命中"
+  },
+
+  "damageTypes": [
+    { "type": "pi-", "label": "小貫通", "woundMultiplier": 0.5 },
+    { "type": "pi",  "label": "通常貫通", "woundMultiplier": 1.0 },
+    { "type": "cr",  "label": "叩き",   "woundMultiplier": 1.0 },
+    { "type": "burn","label": "火傷",   "woundMultiplier": 1.0 },
+    { "type": "tox", "label": "毒",     "woundMultiplier": 1.0 },
+    { "type": "fat", "label": "疲労",   "woundMultiplier": 1.0 },
+    { "type": "cut", "label": "切り",   "woundMultiplier": 1.5 },
+    { "type": "pi+", "label": "大貫通", "woundMultiplier": 1.5 },
+    { "type": "imp", "label": "刺し",   "woundMultiplier": 2.0 },
+    { "type": "pi++", "label": "巨大貫通","woundMultiplier": 2.0 }
+  ],
+  "woundingModifiers": { "imp": 2.0, "cut": 1.5, "pi+": 1.5, "pi++": 2.0, "pi-": 0.5, "pi": 1.0, "cr": 1.0, "burn": 1.0, "tox": 1.0, "fat": 1.0, "spec": 1.0 },
+  "minimumInjury": 1,
+  "damageTable": {
+    "thrust": [0,"1d-6","1d-6","1d-5","1d-5","1d-4","1d-4","1d-3","1d-3","1d-2","1d-2","1d-1","1d-1","1d","1d","1d+1","1d+1","1d+2","1d+2","2d-1","2d-1"],
+    "swing": [0,"1d-5","1d-5","1d-4","1d-4","1d-3","1d-3","1d-2","1d-2","1d-1","1d","1d+1","1d+2","2d-1","2d","2d+1","2d+2","3d-1","3d","3d+1","3d+2"]
+  },
+
+  "criticalDetails": {
+    "criticalSuccess": "防御側能動防御不可、ダメージ最大値適用",
+    "criticalFailureDefense": "転倒または武器落とし（GM決定）"
+  },
+
+  "injuryEffects": {
+    "shock": { "duration": "負傷した直後の自分のターンのみ", "penalty": "負傷HP（最大-4）", "affected": "IQ・DX関連全ての判定", "exclude": "能動防御" },
+    "majorWoundThreshold": 0.5,
+    "majorWoundEffects": "即座にHT判定、失敗で朦朧+転倒。5以上差で失敗→気絶",
+    "mortalWounds": "HP0以下死亡判定で失敗差1-2時に発生、30分毎HT継続",
+    "hpThresholds": [
+      { "belowFraction": 0.334, "effects": ["移動力半分(端数切上)", "よけ半分(端数切上)"] },
+      { "belowFraction": 0, "effects": ["毎ターン開始時にHT(修正=現在HP絶対値/最大HP)、失敗で気絶"] },
+      { "belowFraction": -1, "effects": ["即座に死の判定HT、失敗で死亡。以後HP×倍(1/2/3/4)毎に再判定"] },
+      { "belowFraction": -5, "effects": ["即死（判定不要）"] },
+      { "belowFraction": -10, "effects": ["死体完全破壊"] }
     ]
   },
-  "woundingModifiers": {
-    "imp": 2.0, "cut": 1.5, "pi+": 1.5, "pi-": 0.5, "pi": 1.0, "cr": 1.0, "burn": 1.0, "tox": 1.0, "fat": 1.0, "spec": 1.0
+
+  "stun": {
+    "actions": "何もしないのみ",
+    "dodgePenalty": -4,
+    "recovery": "毎ターン終了時HT判定成功で回復"
   },
-  "injuryAndDeath": {
-    "promptLines": [
-      "■ 状態変化",
-      "- 衝撃(Shock): ダメージ次ターン、負傷HP分（最大-4）のDX/IQペナルティ",
-      "- HP0以下: 毎ターンHT判定、失敗で気絶",
-      "- HP -1×ST: 即死判定(HT)",
-      "- HP -5×ST: 即死"
+
+  "recovery": {
+    "unconsciousness": [
+      { "condition": "HP1以上", "interval": "15分毎", "rule": "自動回復" },
+      { "condition": "HP0以下", "interval": "1時間毎", "rule": "HT判定" },
+      { "condition": "HP<=-最大HP", "interval": "12時間毎(1回)", "rule": "HT判定、失敗=医療/魔法なしでは不可" }
+    ],
+    "naturalHealing": "1日の休息終了時にHT判定成功で1HP回復",
+    "sleepRecovery": "8時間睡眠で1FP回復、以降1時間追加毎に+1FP",
+    "firstAid": {
+      "bandage": "1HP（数分）",
+      "shockTreatment": "技能判定成功で回復（下表参照）"
+    },
+    "firstAidByTL": [
+      { "tl": "0-3", "time": "30分", "recovery": "1d-4(最低1)" },
+      { "tl": "4",   "time": "30分", "recovery": "1d-2" },
+      { "tl": "5",   "time": "20分", "recovery": "1d-2" },
+      { "tl": "6-7", "time": "20分", "recovery": "1d-1" },
+      { "tl": "8",   "time": "10分", "recovery": "1d" }
     ]
   },
-  "encumbrance": {
-    "promptLines": [
-      "■ 重荷修正（BL基準）",
-      "- 軽(1): 2xBL以下, 移動×0.8, よけ-1",
-      "- 並(2): 3xBL以下, 移動×0.6, よけ-2",
-      "- 重(3): 6xBL以下, 移動×0.4, よけ-3",
-      "- 超(4): 10xBL以下, 移動×0.2, よけ-4"
-    ]
+
+  "fatigue": {
+    "thresholds": [
+      { "below": 0.334, "effects": ["移動力半分", "よけ半分", "ST半分（端数切上）"] },
+      { "below": 0, "effects": ["行動ごとにWill判定、失敗で気絶", "FP減少時に代わりにHP-1"] }
+    ],
+    "recovery": "10分の休息（座る/横になる）ごとに1FP回復",
+    "accumulation": {
+      "combatEnd": "10秒超戦闘終了時、1FP+重荷修正",
+      "hiking": "行軍1時間毎、1FP+重荷修正",
+      "hunger": "3食抜く毎に1FP喪失",
+      "dehydration": "水不足8時間毎に1FP喪失",
+      "sleepDeprivation": "超過時間毎Will判定、失敗で1FP喪失",
+      "sleepRecovery": "8時間睡眠=1FP回復、以降+1FP/追加時間",
+      "heat": "80°F以上で30分毎HT、失敗で1FP",
+      "cold": "35°F以下で30分毎HT、失敗で1FP"
+    }
+  },
+
+  "environmental": {
+    "fallDamage": "(HP × 速度) / 100 d6",
+    "falling": "落下距離→落下速度表→衝突ダメージ",
+    "fire": [
+      "炎の中(部分): 毎秒1d-3",
+      "炎の中(全身)/引火: 毎秒1d-1"
+    ],
+    "suffocation": "空気なし→毎秒1FP喪失→0FPで毎秒Will判定→4分で死亡",
+    "poison": "遅延時間+HT抵抗+ダメージ量（摂取/吸入/接触/注入）",
+    "disease": "潜伏期間+HT抵抗+症状(ダメージ/判定ペナルティ)"
   }
 }

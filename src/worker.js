@@ -494,6 +494,53 @@ export default {
       return new Response(JSON.stringify(row || { name: '', description: '' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // ---- Saved Characters CRUD ----
+
+    // GET /api/characters - list all saved characters
+    if (url.pathname === '/api/characters' && request.method === 'GET') {
+      const rows = await db.prepare('SELECT id, name, world_name, total_cp, created_at, updated_at FROM saved_characters ORDER BY updated_at DESC').all();
+      return new Response(JSON.stringify(rows.results || []), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // POST /api/characters - save current character
+    if (url.pathname === '/api/characters' && request.method === 'POST') {
+      try {
+        const _b = await request.json();
+        const _n = (_b.name||'')+'', _wn = (_b.world_name||'')+'';
+        const _st = Number(_b.st)||10, _dx = Number(_b.dx)||10, _iq = Number(_b.iq)||10, _ht = Number(_b.ht)||10;
+        const _hp = Number(_b.hp)||10, _hm = Number(_b.hp_max)||10, _fp = Number(_b.fp)||10, _fm = Number(_b.fp_max)||10;
+        const _tc = Number(_b.total_cp)||100, _wl = Number(_b.will)||10, _pr = Number(_b.per)||10;
+        const _sk = JSON.stringify(_b.skills||[]), _ad = JSON.stringify(_b.advantages||[]), _nt = (_b.notes||'')+'';
+        const _sql = 'INSERT INTO saved_characters (name,world_name,st,dx,iq,ht,hp,hp_max,fp,fp_max,total_cp,will,per,skills,advantages,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+        await db.prepare(_sql).bind(_n,_wn,_st,_dx,_iq,_ht,_hp,_hm,_fp,_fm,_tc,_wl,_pr,_sk,_ad,_nt).run();
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // DELETE /api/characters - clear all (with confirm)
+    if (url.pathname === '/api/characters' && request.method === 'DELETE') {
+      await db.prepare('DELETE FROM saved_characters').run();
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // GET /api/characters/:id - get one character
+    const charDetailMatch = url.pathname.match(/^\/api\/characters\/(\d+)$/);
+    if (charDetailMatch && request.method === 'GET') {
+      const row = await db.prepare('SELECT * FROM saved_characters WHERE id = ?').bind(parseInt(charDetailMatch[1])).first();
+      if (!row) return new Response(JSON.stringify({ error: 'not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      row.skills = JSON.parse(row.skills || '[]');
+      row.advantages = JSON.parse(row.advantages || '[]');
+      return new Response(JSON.stringify(row), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // DELETE /api/characters/:id - delete one
+    if (charDetailMatch && request.method === 'DELETE') {
+      await db.prepare('DELETE FROM saved_characters WHERE id = ?').bind(parseInt(charDetailMatch[1])).run();
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     // GET / - serve index.html
     return new Response('GURPS AI TRPG GM Worker is running. POST /api/chat to send messages.', {
       headers: { 'Content-Type': 'text/plain', ...corsHeaders }

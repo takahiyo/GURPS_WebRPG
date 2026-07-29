@@ -5,4 +5,4 @@ compatibility_date = "2025-04-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "gurps-trpg-db"
-database_id = ""
+database_id = "3186605a-4e1b-43ca-9488-d239f8b1828f"

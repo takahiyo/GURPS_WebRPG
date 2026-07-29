@@ -62,7 +62,7 @@ tailwind.config = { darkMode: 'class' }
     <div class="flex-1 overflow-y-auto p-3 space-y-3">
 
       <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700/60">
-        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="user" class="w-3.5 h-3.5"></i>キャラクターシート</div>
+        <div class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide"><i data-lucide="user" class="w-3.5 h-3.5"></i>キャラクターシート<button onclick="showSaveModal()" class="ml-auto w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-500 border border-gray-300 dark:border-gray-600 rounded" title="クラウド保存"><i data-lucide="save" class="w-3 h-3"></i></button><button onclick="showCharRefModal()" class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-green-500 border border-gray-300 dark:border-gray-600 rounded" title="保存一覧"><i data-lucide="archive" class="w-3 h-3"></i></button></div>
         <div class="flex items-center gap-1">
           <input type="text" id="char-name" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400" placeholder="キャラクター名" maxlength="20">
           <button onclick="toggleNameLock()" id="name-lock-btn" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400 border border-gray-300 dark:border-gray-600 rounded" title="ロック"><i data-lucide="unlock" class="w-3 h-3"></i></button>
@@ -88,6 +88,7 @@ tailwind.config = { darkMode: 'class' }
             <span id="fp-display" class="block w-full text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5">10/10</span>
           </div>
         </div>
+        <div><span id="status-effects" class="block w-full text-center text-[10px] text-gray-400"></span></div>
         <div class="grid grid-cols-4 gap-1 text-[10px] text-gray-400">
           <div>意志 <span id="stat-will" class="text-gray-600 dark:text-gray-300 font-semibold">10</span> <span id="cp-will" class="text-[9px] text-gray-400">±0CP</span></div>
           <div>知覚 <span id="stat-per" class="text-gray-600 dark:text-gray-300 font-semibold">10</span> <span id="cp-per" class="text-[9px] text-gray-400">±0CP</span></div>
@@ -236,6 +237,45 @@ tailwind.config = { darkMode: 'class' }
   </div>
 </div>
 
+<!-- キャラクター保存モーダル -->
+<div id="save-char-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="if(event.target===this)hideSaveModal()">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-sm max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-bold text-gray-800 dark:text-gray-100">キャラクター保存</span>
+      <button onclick="hideSaveModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div class="space-y-3">
+      <div><label class="block text-[10px] text-gray-400 mb-0.5">保存名</label><input type="text" id="save-char-name" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300" placeholder="キャラクター保存名"></div>
+      <div><label class="block text-[10px] text-gray-400 mb-0.5">メモ (任意)</label><textarea id="save-char-notes" rows="3" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400" placeholder="メモ"></textarea></div>
+      <div id="save-char-msg" class="text-xs text-green-500 hidden">保存しました</div>
+      <button onclick="saveCharToCloud()" class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- キャラクター参照モーダル -->
+<div id="char-ref-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="if(event.target===this)hideCharRefModal()">
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-bold text-gray-800 dark:text-gray-100">保存キャラクター一覧</span>
+      <div class="flex items-center gap-2">
+        <button onclick="refreshCharList()" class="text-gray-400 hover:text-blue-500 p-1" title="再読み込み"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+        <button onclick="hideCharRefModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+    <div id="char-ref-list" class="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+      <p class="text-gray-400">読み込み中...</p>
+    </div>
+    <div id="char-ref-detail" class="hidden mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between mb-2">
+        <span id="char-ref-detail-name" class="text-sm font-bold text-gray-800 dark:text-gray-100"></span>
+        <button onclick="loadCharFromRef()" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] rounded transition-colors">このキャラを読み込む</button>
+      </div>
+      <pre id="char-ref-detail-body" class="text-[10px] text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/lucide@latest">
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
@@ -266,14 +306,18 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
    例: 「鋭い爪が肩を裂いた。[HP:-5]」
 
 ② CP購入（能力値・技能・特徴）
-   プレイヤーの依頼を審査し、妥当と判断した場合に /buy コマンドを行頭に出力:
-    能力値は絶対値指定（推奨）: /buy DX 14  /buy IQ 12  /buy Will 14  /buy Per 13
-    能力値は増分指定: /buy ST +1  /buy DX -1
-    技能（数値はCPまたは目標値: 自動変換）: /buy 剣 A 4 dx  (4CPでレベル10)
-    　目標値指定も可: /buy 隠密 A 14 dx  (目標値14→自動で8CPに変換)
-   有利特徴: /buy 利:容姿端麗 5
-   不利特徴: /buy 不利:小心 -15
-   各行1コマンド、説明文とは別の行に記述。
+   プレイヤーの依頼を審査し、妥当と判断した場合に /buy コマンドを行頭に出力します。
+   【最重要】1行に1コマンドのみ。複数の属性や技能を1行にまとめないでください。
+   【正しい例】（各行1コマンド）:
+    /buy DX 14
+    /buy IQ 12
+    /buy ST +1
+    /buy 剣 A 8 dx
+    /buy 隠密 A 14 dx
+    /buy 利:容姿端麗 5
+    /buy 不利:小心 -15
+   【間違った例】（1行に複数コマンドを詰め込まない）:
+    悪: /buy ST 10 DX 12 IQ 12 HT 10 Adv: Luck 15 Dis: Curious -5 Skills: Running 4
    【重要】能力値は絶対値（/buy DX 14）で指定してください。増分指定（/buy DX +4）は現在値に加算されるため、再実行時に重複して加算されます。
 
 ③ NPC追加
@@ -373,7 +417,7 @@ const GURPS_CHAR = {
   ATTR_COST: { st: 10, dx: 20, iq: 20, ht: 10 },
   HP_COST: 2, FP_COST: 3,
   attrLabel: { st: '筋力', dx: '敏捷性', iq: '知力', ht: '生命力' },
-  skillDiffLabel: { E: '易', A: '並', H: '難' },
+  skillDiffLabel: { E: '易', A: '並', H: '難', VH: '至難' },
   skillCpToLevel: {
     E: { 1: -1, 2: 0, 4: 1, 8: 2, 12: 3, 16: 4, 20: 5, 24: 6, 28: 7 },
     A: { 1: -2, 2: -1, 4: 0, 8: 1, 12: 2, 16: 3, 20: 4, 24: 5, 28: 6 },
@@ -401,10 +445,12 @@ const GURPS_CHAR = {
     this.skillDiffLabel.A = R.skillLabel('A');
     this.skillDiffLabel.H = R.skillLabel('H');
     // skillCpToLevel の参照を再構築
-    for (var d in ['E','A','H']) {
-      var tbl = R.getSkillCostTable(d);
-      if (tbl) this.skillCpToLevel[d] = tbl;
+    var diffs = ['E','A','H','VH'];
+    for (var di = 0; di < diffs.length; di++) {
+      var tbl = R.getSkillCostTable(diffs[di]);
+      if (tbl) this.skillCpToLevel[diffs[di]] = tbl;
     }
+    this.skillDiffLabel.VH = R.skillLabel('VH');
   },
 
   skillCpForLevel: function(diff, attrVal, targetLevel) {
@@ -421,8 +467,8 @@ const GURPS_CHAR = {
   },
 
   // ST-based Thrust/Swing damage table (ST 1-20)
-  thrDmg: [0,0,0,0,0,0,0,'1d-3','1d-2','1d-2','1d-2','1d-1','1d-1','1d','1d','1d+1','1d+1','1d+2','1d+2','2d-1','2d-1'],
-  swDmg: [0,0,0,0,0,0,0,'1d-1','1d','1d','1d+1','1d+2','1d+2','2d-1','2d','2d','2d+1','2d+2','2d+2','3d-1','3d-1'],
+  thrDmg: [0,'1d-6','1d-6','1d-5','1d-5','1d-4','1d-4','1d-3','1d-3','1d-2','1d-2','1d-1','1d-1','1d','1d','1d+1','1d+1','1d+2','1d+2','2d-1','2d-1'],
+  swDmg: [0,'1d-5','1d-5','1d-4','1d-4','1d-3','1d-3','1d-2','1d-2','1d-1','1d','1d+1','1d+2','2d-1','2d','2d+1','2d+2','3d-1','3d','3d+1','3d+2'],
 
   fresh: function() {
     return {
@@ -430,6 +476,9 @@ const GURPS_CHAR = {
       st: 10, dx: 10, iq: 10, ht: 10,
       hp: 10, hpMax: 10, fp: 10, fpMax: 10,
       will: 10, per: 10,
+      tl: 3,
+      shock: 0, stunned: false, majorWound: false,
+      mortalWound: false, mortalTimer: 0,
       totalCp: 100, usedCp: 0
     };
   },
@@ -533,7 +582,12 @@ const GURPS_COMBAT = {
     return Math.floor(bs) + 3 + (encMods[encLevel] || 0);
   },
   // 衝撃ペナルティ: 負傷HP分（最大-4）
-  getShock: function(hpLost) { return Math.min(hpLost, 4); }
+  getShock: function(hpLost) { return Math.min(hpLost, 4); },
+  // 応急手当TL表
+  firstAidDice: function(tl) {
+    var tbl = { '0': '1d-4', '1': '1d-4', '2': '1d-4', '3': '1d-4', '4': '1d-2', '5': '1d-2', '6': '1d-1', '7': '1d-1', '8': '1d' };
+    return tbl[String(tl)] || '1d-4';
+  }
 };
 
 // ============================================================
@@ -576,7 +630,7 @@ const GURPS_NPC = {
 // ============================================================
 const STATE_DEFAULTS = {
   apiKey: '', model: 'nvidia/nemotron-3-super-120b-a12b:free',
-  char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false
+  char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false, worldName: ''
 };
 // ============================================================
 const STORAGE_KEY = 'gurps_ai_trpg_state';
@@ -590,7 +644,8 @@ let state = {
   npcs: [],
   customSettings: [],
   messages: [],
-  worldCreated: false
+  worldCreated: false,
+  worldName: ''
 };
 
 let isStreaming = false;
@@ -721,6 +776,21 @@ function updateCharDisplay() {
   $el('cp-fp').textContent = cl((c.fpMax - c.ht) * 3);
   $el('cp-will').textContent = cl((c.will - c.iq) * 5);
   $el('cp-per').textContent = cl((c.per - c.iq) * 5);
+  // ステータス効果表示
+  var statusParts = [];
+  if (c.shock > 0) statusParts.push('衝撃-' + c.shock);
+  if (c.stunned) statusParts.push('朦朧');
+  if (c.majorWound) statusParts.push('大負傷');
+  if (c.mortalWound) statusParts.push('致命傷');
+  var hpRatio = c.hpMax > 0 ? c.hp / c.hpMax : 1;
+  if (hpRatio < 1/3) statusParts.push('HP1/3未満（移動力/よけ半分）');
+  var fpRatio = c.fpMax > 0 ? c.fp / c.fpMax : 1;
+  if (fpRatio < 1/3) statusParts.push('FP1/3未満（移動力/よけ/ST半分）');
+  var stEl = $el('status-effects');
+  if (stEl) {
+    stEl.textContent = statusParts.length ? statusParts.join(' | ') : '';
+    stEl.className = 'block w-full text-center text-[10px] ' + (statusParts.length ? 'text-red-500 font-semibold' : 'text-gray-400');
+  }
 }
 
 function renderCustomRules() {
@@ -869,6 +939,27 @@ function handleBuyCommand(text) {
     var oldCost = existing ? existing.cost : 0;
     var costDelta = advCost - oldCost;
     if (!GURPS_CHAR.canAfford(costDelta)) { showToast('CPが不足しています', 'error'); return false; }
+    // 不利特徴上限チェック（基本CPの50%）
+    if (advCost < 0 || (existing && existing.cost < 0)) {
+      var totalDisadv = 0;
+      for (var di = 0; di < state.advantages.length; di++) {
+        if (state.advantages[di].name !== advName) {
+          if (state.advantages[di].cost < 0) totalDisadv += Math.abs(state.advantages[di].cost);
+        }
+      }
+      var newNeg = existing && existing.cost < 0 ? 0 : Math.abs(advCost);
+      if (newNeg > 0) totalDisadv += newNeg;
+      var limit = Math.floor(state.char.totalCp * 0.5);
+      if (totalDisadv > limit) { showToast('不利特徴の合計CPが上限（' + limit + 'CP）を超えます', 'error'); return false; }
+    }
+    // 癖の数チェック（最大5個、-1CP）
+    if (advCost === -1 && existing === null) {
+      var quirkCount = 0;
+      for (var qi = 0; qi < state.advantages.length; qi++) {
+        if (state.advantages[qi].cost === -1) quirkCount++;
+      }
+      if (quirkCount >= 5) { showToast('癖は最大5個までです', 'error'); return false; }
+    }
     if (existing) {
       if (advCost === 0) { state.advantages.splice(ai, 1); } else { existing.cost = advCost; }
     } else {
@@ -1012,6 +1103,14 @@ function handleBuyCommand(text) {
     showToast('技能「' + skillName + '」を更新しました', '');
     return true;
   }
+  // フォールバック: 複合コマンド(ST/DX/IQ/HT混在の1行)から属性コマンドを抽出
+  var fbTest = text.match(/^\/buy\s+(?:ST|DX|IQ|HT)\s+\d+(?:\s+(?:ST|DX|IQ|HT)\s+\d+)+/);
+  if (fbTest) {
+    var pairs = text.match(/(ST|DX|IQ|HT)\s+(\d+)/g);
+    var okCount = 0;
+    if (pairs) for (var fi = 0; fi < pairs.length; fi++) { if (handleBuyCommand('/buy ' + pairs[fi])) okCount++; }
+    return okCount > 0;
+  }
   return false;
 }
 
@@ -1021,19 +1120,53 @@ function addMessage(role, content) {
 }
 
 function processStatusTags(text) {
-  var regex = /\[(HP|FP):([+-]?\d+)\]/g;
+  var regex = /\[(HP|FP|SHOCK|STUN|MAJOR|MORTAL):([+-]?\d+)\]/g;
   var match, updated = false;
   while ((match = regex.exec(text)) !== null) {
-    var stat = match[1], delta = parseInt(match[2]);
-    if (stat === 'HP') { var n = Math.max(0, Math.min(state.char.hpMax, state.char.hp + delta)); if (n !== state.char.hp) updated = true; state.char.hp = n; }
-    else if (stat === 'FP') { var n = Math.max(0, Math.min(state.char.fpMax, state.char.fp + delta)); if (n !== state.char.fp) updated = true; state.char.fp = n; }
+    var stat = match[1], val = parseInt(match[2]);
+    if (stat === 'HP') {
+      var prev = state.char.hp;
+      var n = Math.max(0, Math.min(state.char.hpMax, state.char.hp + delta));
+      if (n !== state.char.hp) updated = true;
+      state.char.hp = n;
+      // 衝撃: 負傷HP分（最大-4）、ダメージを受けた時のみ
+      if (delta < 0 && n < prev) {
+        state.char.shock = Math.min(prev - n, 4);
+        // 大負傷: 一撃で最大HPの1/2超
+        if (delta < 0 && (prev - n) * 2 > state.char.hpMax) {
+          state.char.majorWound = true;
+        }
+      }
+    } else if (stat === 'FP') {
+      var prev = state.char.fp;
+      var n = Math.max(0, Math.min(state.char.fpMax, state.char.fp + val));
+      if (n !== state.char.fp) updated = true;
+      state.char.fp = n;
+    } else if (stat === 'SHOCK') {
+      if (state.char.shock !== val) updated = true;
+      state.char.shock = Math.max(0, Math.min(val, 4));
+    } else if (stat === 'STUN') {
+      if (state.char.stunned !== !!val) updated = true;
+      state.char.stunned = !!val;
+    } else if (stat === 'MAJOR') {
+      if (state.char.majorWound !== !!val) updated = true;
+      state.char.majorWound = !!val;
+    } else if (stat === 'MORTAL') {
+      if (state.char.mortalWound !== !!val) updated = true;
+      state.char.mortalWound = !!val;
+    }
   }
   if (updated) { updateCharDisplay(); saveState(); }
 }
 
 function highlightTags(text) {
-  return text.replace(/\[(HP|FP):([+-]?\d+)\]/g, function(m, s, v) {
-    return '<span class="' + (v.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') + ' font-bold text-xs">[' + s + ':' + v + ']</span>';
+  return text.replace(/\[(HP|FP|SHOCK|STUN|MAJOR|MORTAL):([+-]?\d+)\]/g, function(m, s, v) {
+    var cls = 'text-green-600 dark:text-green-400';
+    if (s === 'HP' || s === 'FP') cls = v.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+    else if (s === 'SHOCK') cls = 'text-yellow-500';
+    else if (s === 'STUN') cls = 'text-blue-500';
+    else if (s === 'MAJOR') cls = 'text-red-500';
+    return '<span class="' + cls + ' font-bold text-xs">[' + s + ':' + v + ']</span>';
   });
 }
 
@@ -1182,6 +1315,12 @@ async function createWorld() {
   if (!apiKey) { showToast('APIキーを設定してください', 'warn'); closeWorldModal(); return; }
   $el('api-key').value = apiKey;
   state.apiKey = apiKey;
+  // 前のキャラクターをリセット
+  state.char = { name: '', nameLocked: false, st: 10, dx: 10, iq: 10, ht: 10, hp: 10, hpMax: 10, fp: 10, fpMax: 10, will: 10, per: 10, totalCp: 100, usedCp: 0 };
+  state.skills = [];
+  state.advantages = [];
+  state.npcs = [];
+  updateCharDisplay(); renderSkills(); renderAdvantages();
   closeWorldModal();
 
   var tags = [];
@@ -1189,6 +1328,7 @@ async function createWorld() {
   var prompt = '【世界創成】\n以下のタグに基づき、TRPGセッションの世界を創作してください。\n\n選択されたタグ: ' + tags.join(', ') + '\n\n【重要】\n- 必ず日本語のみで出力（英単語・他言語禁止）\n- プレイヤーキャラクターが知り得ない情報は出力しないこと\n- 世界の裏設定やメタ的な説明は一切含めない\n- 「この世界では〜」「本作は〜」のような俯瞰説明は禁止\n- 今プレイヤーが見聞きできることだけを、一人称視点で描写\n\n以下の形式で出力：\n1. **世界名**（太字）\n2. 世界観の概要（2-3文、プレイヤーが知っている範囲で）\n3. あなたが今いる場所と情景描写\n4. あなたの目前で起きている出来事\n5. プレイヤーキャラクター作成に移ること。名前・見た目・役割・得意なこと・性格などを尋ね、GURPSのルールに沿ってステータスを決めるための問答を始めてください。「まずはあなたのキャラクターについて教えてください」のような形で自然に誘導すること。';
 
   var modelName = $el('model-select').value;
+  if (modelName === 'openrouter/free') modelName = 'nvidia/nemotron-3-super-120b-a12b:free';
   var requestBody = {
     model: modelName,
     messages: [
@@ -1244,6 +1384,9 @@ async function createWorld() {
     if (!reply) reply = '（応答が空でした）';
 
     state.worldCreated = true;
+    // 世界名を抽出（AIの「**世界名**」形式から）
+    var wnMatch = reply.match(/\*{2}([^*]+?)\*{2}/);
+    state.worldName = wnMatch ? wnMatch[1].trim() : '';
     state.messages = [];
     addMessage('system', '世界創成: ' + tags.join(', '));
     addMessage('gm', reply);
@@ -1367,6 +1510,57 @@ async function sendMessage() {
     var result = GURPS_CORE.successRoll(base, mod);
     addMessage('system', '[判定: 目標値' + result.effective + ' | 出目:' + result.roll.total + ' (' + result.roll.d1 + ',' + result.roll.d2 + ',' + result.roll.d3 + ') | 結果:' + result.result.label + ']');
     input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
+    return;
+  }
+
+  var turnCmd = text.match(/^\/turn$/);
+  if (turnCmd) {
+    state.char.shock = 0;
+    state.char.stunned = false;
+    addMessage('system', '【ターン経過】衝撃と朦朧を解除しました');
+    updateCharDisplay(); saveState();
+    input.value = ''; input.style.height = 'auto'; renderChat();
+    return;
+  }
+
+  var stunCheck = text.match(/^\/stun$/);
+  if (stunCheck && state.char.stunned) {
+    var htRoll = GURPS_CORE.successRoll(state.char.ht);
+    if (htRoll.result.success) {
+      state.char.stunned = false;
+      addMessage('system', '【朦朧回復】HT判定成功 (' + htRoll.roll.total + ' <= ' + htRoll.effective + ') 朦朧解除');
+    } else {
+      addMessage('system', '【朦朧継続】HT判定失敗 (' + htRoll.roll.total + ' > ' + htRoll.effective + ')');
+    }
+    updateCharDisplay(); saveState();
+    input.value = ''; input.style.height = 'auto'; renderChat();
+    return;
+  }
+
+  var faCmd = text.match(/^\/firstaid(?:\s+(\d+))?$/);
+  if (faCmd) {
+    var tl = faCmd[1] ? parseInt(faCmd[1]) : (state.char.tl || 3);
+    var faResult = GURPS_COMBAT.damageRoll(GURPS_COMBAT.firstAidDice(tl));
+    var heal = Math.max(1, faResult.total);
+    state.char.hp = Math.min(state.char.hpMax, state.char.hp + heal);
+    addMessage('system', '【応急手当(TL' + tl + ')】' + heal + 'HP回復 (' + faResult.expr + '=' + faResult.total + ')');
+    updateCharDisplay(); saveState();
+    input.value = ''; input.style.height = 'auto'; renderChat();
+    return;
+  }
+
+  var mortCmd = text.match(/^\/mortalth$/);
+  if (mortCmd && state.char.mortalWound) {
+    var pen = Math.floor(Math.abs(state.char.hp) / Math.max(1, state.char.hpMax));
+    var htRoll = GURPS_CORE.successRoll(state.char.ht, -pen);
+    if (htRoll.result.success) {
+      state.char.mortalWound = false;
+      addMessage('system', '【致命傷回復】HT判定成功。致命傷から回復');
+    } else {
+      addMessage('system', '【致命傷悪化】HT判定失敗。30分後再判定');
+    }
+    updateCharDisplay(); saveState();
+    input.value = ''; input.style.height = 'auto'; renderChat();
     return;
   }
 
@@ -1715,6 +1909,112 @@ function toggleRulesModal() {
   }
 }
 function closeRulesModal() { $el('rules-modal').classList.add('hidden'); }
+
+// ========== キャラクター保存 / 参照 ==========
+var _refCharId = null;
+
+function showSaveModal() {
+  if (!API_BASE) { showToast('Workerモードでのみ保存できます', 'warn'); return; }
+  $el('save-char-name').value = state.char.name || '';
+  $el('save-char-notes').value = '';
+  $el('save-char-msg').classList.add('hidden');
+  $el('save-char-modal').classList.remove('hidden');
+}
+function hideSaveModal() { $el('save-char-modal').classList.add('hidden'); }
+
+async function saveCharToCloud() {
+  var name = $el('save-char-name').value.trim();
+  if (!name) { showToast('保存名を入力してください', 'error'); return; }
+  try {
+    var res = await fetch(API_BASE + '/api/characters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name, world_name: state.worldName || '',
+        st: state.char.st, dx: state.char.dx, iq: state.char.iq, ht: state.char.ht,
+        hp: state.char.hp, hp_max: state.char.hpMax,
+        fp: state.char.fp, fp_max: state.char.fpMax,
+        total_cp: state.char.totalCp,
+        will: state.char.will, per: state.char.per,
+        skills: state.skills || [],
+        advantages: state.advantages || [],
+        notes: $el('save-char-notes').value.trim()
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    $el('save-char-msg').classList.remove('hidden');
+    showToast('保存しました', '');
+  } catch(e) { showToast('保存失敗: ' + e.message, 'error'); }
+}
+
+async function showCharRefModal() {
+  if (!API_BASE) { showToast('Workerモードでのみ参照できます', 'warn'); return; }
+  _refCharId = null;
+  $el('char-ref-detail').classList.add('hidden');
+  $el('char-ref-list').innerHTML = '<p class="text-gray-400">読み込み中...</p>';
+  $el('char-ref-modal').classList.remove('hidden');
+  await refreshCharList();
+}
+function hideCharRefModal() { $el('char-ref-modal').classList.add('hidden'); }
+
+async function refreshCharList() {
+  if (!API_BASE) return;
+  $el('char-ref-list').innerHTML = '<p class="text-gray-400">読み込み中...</p>';
+  try {
+    var res = await fetch(API_BASE + '/api/characters');
+    if (!res.ok) throw new Error(await res.text());
+    var list = await res.json();
+    if (!list.length) { $el('char-ref-list').innerHTML = '<p class="text-gray-400">保存されたキャラクターはありません</p>'; return; }
+    var html = '';
+    for (var ci = 0; ci < list.length; ci++) {
+      var c = list[ci];
+      html += '<div class="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/60" onclick="showCharRefDetail(' + c.id + ')">';
+      html += '<div><span class="font-semibold text-gray-700 dark:text-gray-200">' + escHtml(c.name) + '</span><span class="ml-2 text-gray-400">(' + escHtml(c.world_name || '') + ') CP' + c.total_cp + '</span></div>';
+      html += '<div class="text-[9px] text-gray-400">' + (c.updated_at || '').substring(0, 10) + '</div>';
+      html += '</div>';
+    }
+    $el('char-ref-list').innerHTML = html;
+  } catch(e) { $el('char-ref-list').innerHTML = '<p class="text-red-400">読み込み失敗: ' + escHtml(e.message) + '</p>'; }
+}
+
+async function showCharRefDetail(id) {
+  _refCharId = id;
+  try {
+    var res = await fetch(API_BASE + '/api/characters/' + id);
+    if (!res.ok) throw new Error(await res.text());
+    var c = await res.json();
+    $el('char-ref-detail-name').textContent = c.name;
+    var body = 'ST:' + c.st + ' DX:' + c.dx + ' IQ:' + c.iq + ' HT:' + c.ht + '\n';
+    body += 'HP:' + c.hp + '/' + c.hp_max + ' FP:' + c.fp + '/' + c.fp_max + '\n';
+    body += 'CP:' + c.total_cp + '\n';
+    if (c.skills && c.skills.length) {
+      body += '\n【技能】\n';
+      for (var si = 0; si < c.skills.length; si++) body += c.skills[si].name + ' (' + c.skills[si].diff + '/' + (c.skills[si].attr||'iq').toUpperCase() + ') CP:' + c.skills[si].cp + '\n';
+    }
+    if (c.advantages && c.advantages.length) {
+      body += '\n【特徴】\n';
+      for (var ai = 0; ai < c.advantages.length; ai++) body += c.advantages[ai].name + ' (' + (c.advantages[ai].cost >= 0 ? '+' : '') + c.advantages[ai].cost + 'CP)\n';
+    }
+    if (c.notes) body += '\n【メモ】\n' + c.notes;
+    $el('char-ref-detail-body').textContent = body;
+    $el('char-ref-detail').classList.remove('hidden');
+  } catch(e) { showToast('読み込み失敗', 'error'); }
+}
+
+function loadCharFromRef() {
+  if (!_refCharId) return;
+  fetch(API_BASE + '/api/characters/' + _refCharId).then(function(res) { return res.json(); }).then(function(c) {
+    state.char.st = c.st; state.char.dx = c.dx; state.char.iq = c.iq; state.char.ht = c.ht;
+    state.char.hp = c.hp; state.char.hpMax = c.hp_max; state.char.fp = c.fp; state.char.fpMax = c.fp_max;
+    state.char.totalCp = c.total_cp; state.char.will = c.will; state.char.per = c.per;
+    state.char.name = c.name || '';
+    state.skills = c.skills || [];
+    state.advantages = c.advantages || [];
+    updateCharDisplay(); renderSkills(); renderAdvantages(); saveState();
+    hideCharRefModal();
+    showToast('キャラクター「' + c.name + '」を読み込みました', '');
+  }).catch(function(e) { showToast('読み込み失敗', 'error'); });
+}
 
 function init() {
   console.log('[init] ==== GURPS AI TRPG GM Startup ====');

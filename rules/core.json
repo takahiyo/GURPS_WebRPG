@@ -2,22 +2,101 @@
   "title": "GURPS Lite 4th Edition",
   "version": "1.0",
   "cpBudget": 100,
+  "disadvantageLimit": 0.5,
+  "quirksLimit": 5,
+  "minEffectiveSkill": 3,
+  "offHandPenalty": -4,
+  "ruleOf20": true,
+
   "attributes": {
-    "st": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "筋力(ST)", "promptLine": "ST/HT: ±10CP/レベル（基本値10）" },
-    "dx": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "敏捷性(DX)", "promptLine": "DX/IQ: ±20CP/レベル（基本値10）" },
-    "iq": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "知力(IQ)", "promptLine": "" },
-    "ht": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "生命力(HT)", "promptLine": "" }
+    "st": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "筋力(ST)" },
+    "dx": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "敏捷性(DX)" },
+    "iq": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "知力(IQ)" },
+    "ht": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "生命力(HT)" }
   },
+
   "secondaries": {
-    "hp": { "baseAttr": "st", "costPerLevel": 2, "min": 1, "max": 40, "label": "HP", "promptLine": "HP: STを基準に±2CP/レベル" },
-    "fp": { "baseAttr": "ht", "costPerLevel": 3, "min": 1, "max": 40, "label": "FP", "promptLine": "FP: HTを基準に±3CP/レベル" },
-    "will": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "意志(Will)", "promptLine": "意志(Will)・知覚(Per): IQ基準（別途購入は±5CP）" },
-    "per": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "知覚(Per)", "promptLine": "" }
+    "hp": { "baseAttr": "st", "costPerLevel": 2, "min": 1, "max": 40, "label": "HP" },
+    "fp": { "baseAttr": "ht", "costPerLevel": 3, "min": 1, "max": 40, "label": "FP" },
+    "will": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "意志" },
+    "per": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "知覚" }
   },
+
   "derived": [
-    { "key": "basicSpeed", "label": "基本速度", "formula": "(DX+HT)/4", "promptLine": "基本速度(Basic Speed) = (DX+HT)/4" },
-    { "key": "basicMove", "label": "移動力", "formula": "基本速度の整数部", "promptLine": "移動力(Basic Move) = 基本速度の整数部" },
-    { "key": "dodge", "label": "よけ", "formula": "基本速度+3（端数切捨て）", "promptLine": "よけ(Dodge) = 基本速度+3（端数切捨て）" },
-    { "key": "basicLift", "label": "基本リフト", "formula": "(ST×ST)/5", "unit": "ポンド", "promptLine": "基本リフト(BL) = (ST*ST)/5 ポンド" }
-  ]
+    { "key": "basicSpeed", "label": "基本速度", "formula": "(DX+HT)/4（端数切捨てなし）" },
+    { "key": "basicMove", "label": "基本移動力", "formula": "基本速度の整数部" },
+    { "key": "dodge", "label": "よけ", "formula": "基本速度+3（端数切捨て）" },
+    { "key": "basicLift", "label": "基本リフト(BL)", "formula": "(ST×ST)/5", "unit": "ポンド" }
+  ],
+
+  "skillDefaults": {
+    "E": -4,
+    "A": -5,
+    "H": -6,
+    "VH": -7
+  },
+
+  "encumbrance": [
+    { "level": 0, "name": "無", "maxMultiplier": 1.0, "moveMult": 1.0, "dodgePenalty": 0, "skillPenalty": 0 },
+    { "level": 1, "name": "軽", "maxMultiplier": 2.0, "moveMult": 0.8, "dodgePenalty": -1, "skillPenalty": -1 },
+    { "level": 2, "name": "並", "maxMultiplier": 3.0, "moveMult": 0.6, "dodgePenalty": -2, "skillPenalty": -2 },
+    { "level": 3, "name": "重", "maxMultiplier": 6.0, "moveMult": 0.4, "dodgePenalty": -3, "skillPenalty": -3 },
+    { "level": 4, "name": "超", "maxMultiplier": 10.0, "moveMult": 0.2, "dodgePenalty": -4, "skillPenalty": -4 }
+  ],
+
+  "encumbranceMinMove": 1,
+
+  "movement": {
+    "sprintBonus": 0.2,
+    "hikingBase": 10,
+    "terrainModifiers": { "goodRoad": 1.25, "averageForest": 1.0, "roughMountain": 0.5, "deepSandSnow": 0.2 },
+    "swimDivisor": 5,
+    "swimIntervalMinutes": 5,
+    "swimEncumbranceMultiplier": 2,
+    "swimFpCost": 1,
+    "highJumpFormula": "(6 × 基本移動力 - 10) インチ",
+    "broadJumpFormula": "(2 × 基本移動力 - 3) フィート",
+    "jumpRunMaxMultiplier": 2,
+    "lifting": { "oneHand": 2, "twoHand": 8, "drag": 12, "dragRunUp": 24, "carry": 15, "shift": 50 }
+  },
+
+  "throwing": {
+    "distanceModifiers": [
+      { "ratioMax": 0.05, "modifier": 3.5 },
+      { "ratioMax": 0.5, "modifier": 0.8 },
+      { "ratioMax": 1.0, "modifier": 0.6 },
+      { "ratioMax": 10.0, "modifier": 0.06 }
+    ],
+    "damageThresholds": [
+      { "ratioMax": 0.25, "damage": "thr-1 per die" },
+      { "ratioMax": 0.5, "damage": "thr" },
+      { "ratioMax": 1.0, "damage": "thr+1 per die" },
+      { "ratioMax": 2.0, "damage": "thr" }
+    ]
+  },
+
+  "reaction": {
+    "table": [
+      { "min": -99, "max": 0, "label": "破滅的", "description": "即座に攻撃、裏切りなど" },
+      { "min": 1, "max": 3, "label": "非常に悪い", "description": "露骨な敵意、不当な取引" },
+      { "min": 4, "max": 6, "label": "悪い", "description": "無関心、利益があれば敵対" },
+      { "min": 7, "max": 9, "label": "お粗末", "description": "非協力的、高額な賄賂を要求" },
+      { "min": 10, "max": 12, "label": "中立", "description": "事務的、儀礼的" },
+      { "min": 13, "max": 15, "label": "良い", "description": "協力的、常識的な依頼に応じる" },
+      { "min": 16, "max": 18, "label": "非常に良い", "description": "友好的、自発的な援助" },
+      { "min": 19, "max": 99, "label": "最高", "description": "心酔、自己犠牲的な援助" }
+    ]
+  },
+
+  "worldBuilding": {
+    "languages": { "levels": ["不可", "片言", "訛あり", "母語"] },
+    "lawsAndCustoms": "社会的制約の定義",
+    "societyAndGovernment": "封建制/民主制など統治形態",
+    "techLevel": "キャンペーン基本TL",
+    "economics": "通貨単位/物価/初期財産",
+    "otherPlanes": "魔法/超常現象の有無",
+    "adventureSettings": "舞台/時代",
+    "skillsAndProfessions": "推奨/禁止技能と職業",
+    "weaponsAndCombat": "使用武器制限"
+  }
 }
