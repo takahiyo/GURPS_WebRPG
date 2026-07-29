@@ -319,6 +319,15 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
    【間違った例】（1行に複数コマンドを詰め込まない）:
     悪: /buy ST 10 DX 12 IQ 12 HT 10 Adv: Luck 15 Dis: Curious -5 Skills: Running 4
    【重要】能力値は絶対値（/buy DX 14）で指定してください。増分指定（/buy DX +4）は現在値に加算されるため、再実行時に重複して加算されます。
+   【重要】プレイヤーから「転記しなおし」「リセット」「シートを作り直し」など、キャラクターシート全体の再作成を依頼された場合は、必ず最初に属性4種（ST/DX/IQ/HT）の/buyを絶対値で出力し、その後技能・特徴の/buyを出力すること。例:
+    /buy ST 10
+    /buy DX 11
+    /buy IQ 12
+    /buy HT 10
+    /buy HP 10
+    /buy FP 10
+    /buy 隠密 A 12 dx
+    /buy 利:幸運 15
 
 ③ NPC追加
    ストーリー上必要と判断した場合、/npcadd を行頭に出力:
@@ -1126,14 +1135,12 @@ function processStatusTags(text) {
     var stat = match[1], val = parseInt(match[2]);
     if (stat === 'HP') {
       var prev = state.char.hp;
-      var n = Math.max(0, Math.min(state.char.hpMax, state.char.hp + delta));
+      var n = Math.max(0, Math.min(state.char.hpMax, state.char.hp + val));
       if (n !== state.char.hp) updated = true;
       state.char.hp = n;
-      // 衝撃: 負傷HP分（最大-4）、ダメージを受けた時のみ
-      if (delta < 0 && n < prev) {
+      if (val < 0 && n < prev) {
         state.char.shock = Math.min(prev - n, 4);
-        // 大負傷: 一撃で最大HPの1/2超
-        if (delta < 0 && (prev - n) * 2 > state.char.hpMax) {
+        if (val < 0 && (prev - n) * 2 > state.char.hpMax) {
           state.char.majorWound = true;
         }
       }
@@ -1321,6 +1328,7 @@ async function createWorld() {
   state.advantages = [];
   state.npcs = [];
   updateCharDisplay(); renderSkills(); renderAdvantages();
+  saveState();
   closeWorldModal();
 
   var tags = [];
