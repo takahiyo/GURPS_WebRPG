@@ -43,6 +43,17 @@ tailwind.config = { darkMode: 'class' }
 @keyframes modal-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 .modal-anim { animation: modal-in 0.2s ease-out; }
 .tag-chip { transition: all 0.15s ease; }
+/* ダイスロールアニメーション */
+#dice-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+#dice-overlay.hidden { display: none; }
+.dice-scene { background: #1e293b; border-radius: 20px; padding: 30px 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); text-align: center; }
+.dice-row { display: flex; gap: 16px; justify-content: center; margin: 16px 0; }
+.dice { width: 64px; height: 64px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #1e293b; box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 2px solid #d97706; transition: none; }
+.dice.rolling { animation: dice-tumble 0.12s infinite; }
+@keyframes dice-tumble { 0% { transform: rotateX(0deg) rotateY(0deg); } 25% { transform: rotateX(90deg) rotateY(45deg); } 50% { transform: rotateX(180deg) rotateY(0deg); } 75% { transform: rotateX(270deg) rotateY(-45deg); } 100% { transform: rotateX(360deg) rotateY(0deg); } }
+.dice-result-text { color: #fbbf24; font-size: 14px; font-weight: 600; margin-top: 8px; letter-spacing: 0.5px; }
+.dice-hint { color: #94a3b8; font-size: 11px; margin-top: 12px; }
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
 </head>
@@ -341,6 +352,9 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
 
 ④ 判定実行
    /roll 目標値 [+-修正]
+
+【ロール実行ルール】
+プレイヤーが「壁を調べる」「隠れて進む」「跳び越える」など、技能や能力値に関わる具体的な行動を宣言した場合、GMは即座に適切な技能・能力値を判断し、/roll コマンドを出力して判定を実行してください。プレイヤーが技能を指定しない場合はGMが文脈から適切な技能を選びます。ロール結果が出たら、それに基づいて情景を描写すること。
 
 【進行ルール】
 1. プレイヤーの行動やダイス結果に基づき、物語を情景豊かに描写してください。
@@ -1525,6 +1539,7 @@ async function sendMessage() {
     var mod = rollCmd[2] ? parseInt(rollCmd[2]) : 0;
     var result = GURPS_CORE.successRoll(base, mod);
     addMessage('system', '[判定: 目標値' + result.effective + ' | 出目:' + result.roll.total + ' (' + result.roll.d1 + ',' + result.roll.d2 + ',' + result.roll.d3 + ') | 結果:' + result.result.label + ']');
+    showDiceRoll(result);
     input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
     return;
   }
@@ -2135,6 +2150,40 @@ document.addEventListener('DOMContentLoaded', async function() {
   init();
   console.log('[DOM] ==== Initialization complete ====');
 });
+function showDiceRoll(roll) {
+  var overlay = $el('dice-overlay');
+  var dieEls = overlay.querySelectorAll('.dice');
+  overlay.classList.remove('hidden');
+  dieEls.forEach(function(el) { el.textContent = '?'; el.classList.add('rolling'); });
+  var rollText = overlay.querySelector('.dice-result-text');
+  rollText.textContent = 'ロール中…';
+  var interval = setInterval(function() {
+    dieEls.forEach(function(el) { el.textContent = Math.floor(Math.random() * 6) + 1; });
+  }, 80);
+  setTimeout(function() {
+    clearInterval(interval);
+    var d = roll.roll;
+    dieEls[0].textContent = d.d1; dieEls[0].classList.remove('rolling');
+    dieEls[1].textContent = d.d2; dieEls[1].classList.remove('rolling');
+    dieEls[2].textContent = d.d3; dieEls[2].classList.remove('rolling');
+    var label = roll.result.success ? '成功' : '失敗';
+    var crit = roll.result.critical ? (roll.result.critical === 'success' ? '【必殺成功】' : '【致命的失敗】') : '';
+    rollText.innerHTML = '目標値' + roll.effective + ' 出目' + d.total + ' <strong>' + label + '</strong> ' + crit;
+    overlay.onclick = function() { overlay.classList.add('hidden'); overlay.onclick = null; };
+  }, 1500);
+}
+
 </script>
+<div id="dice-overlay" class="hidden">
+  <div class="dice-scene">
+    <div class="dice-row">
+      <div class="dice rolling">?</div>
+      <div class="dice rolling">?</div>
+      <div class="dice rolling">?</div>
+    </div>
+    <div class="dice-result-text">ロール中…</div>
+    <div class="dice-hint">クリックで閉じる</div>
+  </div>
+</div>
 </body>
 </html>
