@@ -248,9 +248,10 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
 
 ② CP購入（能力値・技能・特徴）
    プレイヤーの依頼を審査し、妥当と判断した場合に /buy コマンドを行頭に出力:
-   能力値は絶対値指定（推奨）: /buy DX 14  /buy IQ 12
-   能力値は増分指定: /buy ST +1  /buy DX -1
-   技能: /buy 剣 A 4 dx
+    能力値は絶対値指定（推奨）: /buy DX 14  /buy IQ 12  /buy Will 14  /buy Per 13
+    能力値は増分指定: /buy ST +1  /buy DX -1
+    技能（数値はCPまたは目標値: 自動変換）: /buy 剣 A 4 dx  (4CPでレベル10)
+    　目標値指定も可: /buy 隠密 A 14 dx  (目標値14→自動で8CPに変換)
    有利特徴: /buy 利:容姿端麗 5
    不利特徴: /buy 不利:小心 -15
    各行1コマンド、説明文とは別の行に記述。
@@ -415,6 +416,16 @@ const GURPS_CHAR = {
   },
   skillLevels: [0, 1, 2, 4, 8, 12, 16, 20, 24, 28],
 
+  skillCpForLevel: function(diff, attrVal, targetLevel) {
+    var table = this.skillCpToLevel[diff] || this.skillCpToLevel.A;
+    var neededBonus = targetLevel - attrVal;
+    var bestCp = 999;
+    for (var cp in table) {
+      if (table[cp] >= neededBonus) { var n = parseInt(cp); if (n > 0 && n < bestCp) bestCp = n; }
+    }
+    return bestCp === 999 ? null : bestCp;
+  },
+
   // ST-based Thrust/Swing damage table (ST 1-20)
   thrDmg: [0,0,0,0,0,0,0,'1d-3','1d-2','1d-2','1d-2','1d-1','1d-1','1d','1d','1d+1','1d+1','1d+2','1d+2','2d-1','2d-1'],
   swDmg: [0,0,0,0,0,0,0,'1d-1','1d','1d','1d+1','1d+2','1d+2','2d-1','2d','2d','2d+1','2d+2','2d+2','3d-1','3d-1'],
@@ -476,6 +487,8 @@ const GURPS_CHAR = {
     total += (c.ht - 10) * this.ATTR_COST.ht;
     total += (c.hpMax - c.st) * this.HP_COST;
     total += (c.fpMax - c.ht) * this.FP_COST;
+    total += (c.will - c.iq) * 5;
+    total += (c.per - c.iq) * 5;
     for (var i = 0; i < state.skills.length; i++) {
       total += state.skills[i].cp;
     }
@@ -818,7 +831,7 @@ function handleBuyCommand(text) {
     if (advType === '不利') {
       if (advCost > 0) advCost = -advCost;
     } else {
-      if (advCost < 0) { showToast('有利な特徴は正のCPで指定', 'error'); return true; }
+      if (advCost < 0) { showToast('有利な特徴は正のCPで指定', 'error'); return false; }
     }
     var existing = null;
     for (var ai = 0; ai < state.advantages.length; ai++) {
@@ -826,10 +839,9 @@ function handleBuyCommand(text) {
     }
     var oldCost = existing ? existing.cost : 0;
     var costDelta = advCost - oldCost;
-    if (!GURPS_CHAR.canAfford(costDelta)) { showToast('CPが不足しています', 'error'); return true; }
+    if (!GURPS_CHAR.canAfford(costDelta)) { showToast('CPが不足しています', 'error'); return false; }
     if (existing) {
-      existing.cost = advCost;
-      state.advantages.splice(ai, 1);
+      if (advCost === 0) { state.advantages.splice(ai, 1); } else { existing.cost = advCost; }
     } else {
       state.advantages.push({ name: advName, cost: advCost });
     }
@@ -842,7 +854,7 @@ function handleBuyCommand(text) {
     return true;
   }
 
-  var attrMatch = text.match(/^\/buy\s+(ST|DX|IQ|HT|HP|FP)\s*([+-]?\d+)$/);
+  var attrMatch = text.match(/^\/buy\s+(ST|DX|IQ|HT|HP|FP|Will|Per|意志|知覚)\s*([+-]?\d+)$/);
   if (attrMatch) {
     var what = attrMatch[1];
     var raw = attrMatch[2];
@@ -899,24 +911,54 @@ function handleBuyCommand(text) {
       showToast('FP上限を' + delta + 'しました', '');
       return true;
     }
+    if (what === 'Will' || what === '意志') {
+      var newWill = isDelta ? state.char.will + delta : delta;
+      if (newWill < 1 || newWill > 20) { showToast('意志は1～20の範囲です', 'error'); return; }
+      var oldWill = state.char.will;
+      var cpDelta = (newWill - state.char.iq) * 5 - (oldWill - state.char.iq) * 5;
+      if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
+      state.char.will = newWill;
+      var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+      addMessage('system', '【CP変更】意志 ' + oldWill + '→' + newWill + ' (' + costLabel + ')');
+      updateCharDisplay();
+      saveState();
+      showToast('意志を' + (isDelta ? delta : newWill) + 'しました', '');
+      return true;
+    }
+    if (what === 'Per' || what === '知覚') {
+      var newPer = isDelta ? state.char.per + delta : delta;
+      if (newPer < 1 || newPer > 20) { showToast('知覚は1～20の範囲です', 'error'); return; }
+      var oldPer = state.char.per;
+      var cpDelta = (newPer - state.char.iq) * 5 - (oldPer - state.char.iq) * 5;
+      if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
+      state.char.per = newPer;
+      var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
+      addMessage('system', '【CP変更】知覚 ' + oldPer + '→' + newPer + ' (' + costLabel + ')');
+      updateCharDisplay();
+      saveState();
+      showToast('知覚を' + (isDelta ? delta : newPer) + 'しました', '');
+      return true;
+    }
   }
-  // /buy 技能名 (E|A|H) CP [st|dx|iq|ht]
+  // /buy 技能名 (E|A|H) CP|目標値 [st|dx|iq|ht]
   var skillMatch = text.match(/^\/buy\s+(.+?)\s+(E|A|H)\s+(\d+)(?:\s+(st|dx|iq|ht))?$/);
   if (!skillMatch) skillMatch = text.match(/^\/buy\s+(.+?)\s+(\d+)(?:\s+(st|dx|iq|ht))?$/);
   if (skillMatch) {
     var skillName = skillMatch[1].trim();
     var diff = skillMatch[2] || 'A';
-    var cp = parseInt(skillMatch[3] || skillMatch[2]);
+    var val = parseInt(skillMatch[3] || skillMatch[2]);
     var skillAttr = skillMatch[4] || 'iq';
-    if (!GURPS_CHAR.skillCpToLevel[diff]) { showToast('難度は E(易)/A(並)/H(難) のいずれか', 'error'); return true; }
+    if (!GURPS_CHAR.skillCpToLevel[diff]) { showToast('難度は E(易)/A(並)/H(難) のいずれか', 'error'); return false; }
     var validCps = GURPS_CHAR.skillLevels;
-    var found = false;
-    for (var ci = 0; ci < validCps.length; ci++) {
-      if (validCps[ci] === cp) { found = true; break; }
+    var cp = val;
+    if (validCps.indexOf(val) === -1 || val === 0) {
+      var baseAttr = state.char[skillAttr] || 10;
+      var converted = GURPS_CHAR.skillCpForLevel(diff, baseAttr, val);
+      if (converted !== null) { cp = converted; }
     }
-    if (!found || cp === 0) {
+    if (validCps.indexOf(cp) === -1 || cp === 0) {
       showToast('技能CPは ' + validCps.filter(function(v){return v>0;}).join('/') + ' のいずれか', 'error');
-      return true;
+      return false;
     }
     var existing = null;
     for (var si = 0; si < state.skills.length; si++) {
@@ -924,7 +966,7 @@ function handleBuyCommand(text) {
     }
     var oldCp = existing ? existing.cp : 0;
     var cpDelta = cp - oldCp;
-    if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return true; }
+    if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return false; }
     if (existing) {
       existing.cp = cp;
       existing.attr = skillAttr;
@@ -1427,11 +1469,16 @@ async function sendMessage() {
     var buyLines = reply.match(/^\/buy\s+.+$/gm);
     if (buyLines) {
       var before = GURPS_CHAR.calcTotalUsedCp();
+      var okCount = 0;
       for (var bl = 0; bl < buyLines.length; bl++) {
-        handleBuyCommand(buyLines[bl].trim());
+        if (handleBuyCommand(buyLines[bl].trim())) okCount++;
       }
       var after = GURPS_CHAR.calcTotalUsedCp();
-      if (after === before) addMessage('system', '【購入注意】/buy コマンドが適用されませんでした。予算や形式を確認してください。');
+      if (after === before && okCount === 0) {
+        addMessage('system', '【購入注意】/buy コマンドが適用されませんでした。予算や形式を確認してください。');
+      } else if (buyLines.length > okCount) {
+        addMessage('system', '【購入注意】' + (buyLines.length - okCount) + '個のコマンドが適用できませんでした（予算不足・形式エラー）。');
+      }
     }
     renderChat();
     saveState();
