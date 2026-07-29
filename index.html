@@ -596,7 +596,7 @@ function loadState() {
       const saved = JSON.parse(raw);
       state.apiKey = saved.apiKey || '';
       state.model = saved.model || 'nvidia/nemotron-3-super-120b-a12b:free';
-      var deprecatedModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'qwen/qwen3-8b-instruct:free'];
+      var deprecatedModels = ['google/gemma-4-31b-it:free', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'qwen/qwen3-8b-instruct:free'];
       if (deprecatedModels.indexOf(state.model) !== -1) state.model = 'nvidia/nemotron-3-super-120b-a12b:free';
       state.char = saved.char || GURPS_CHAR.fresh();
       if (state.char.nameLocked === undefined) state.char.nameLocked = false;
