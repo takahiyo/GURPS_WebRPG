@@ -1,0 +1,8 @@
+name = "gurps-trpg-gm"
+main = "src/worker.js"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gurps-trpg-db"
+database_id = ""

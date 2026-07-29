@@ -131,10 +131,15 @@ tailwind.config = { darkMode: 'class' }
           <label class="block text-[10px] text-gray-400 mb-0.5">モデル</label>
           <select id="model-select" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300">
             <option value="openrouter/free">openrouter/free (自動選択)</option>
-            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (free)</option>
-            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash Exp (free)</option>
-            <option value="qwen/qwen3-8b-instruct:free">Qwen3 8B (free)</option>
+            <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super 120B (free) ★推奨</option>
+            <option value="openai/gpt-oss-20b:free">GPT-OSS 20B (free)</option>
+            <option value="inclusionai/ling-3.0-flash:free">Ling 3.0 Flash (free)</option>
+            <option value="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free">Nemotron 3 Nano Omni (free)</option>
           </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-gray-400 mb-0.5">Worker API URL (空なら直接OpenRouter)</label>
+          <input type="text" id="api-base" class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400" placeholder="https://gurps-worker.example.workers.dev" autocomplete="off">
         </div>
       </div>
     </div>
@@ -223,6 +228,37 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
 - 必ず日本語のみで出力してください。英単語・他言語を一切混ぜないでください。
 - キャラクター名や固有名詞もすべて日本語/カタカナで表記してください。
 
+【絶対ルール: ステータス管理】
+- あなた（GM）が全てのキャラクターステータスを管理・審査します。
+- プレイヤーは直接ステータスを変更できません。必ず自然言語で依頼し、あなたがルールに照らして判断してください。
+- プレイヤーの依頼は以下のように処理します:
+   ✅ 認めるケース（例）:「剣技能を上げたい」→ 残CP・現在技能を確認し、問題なければ /buy を出力して反映
+   ❌ 認めないケース（例）:「ダメージを無かったことに」「CPを10くれ」→ ルール上妥当な理由がなければ却下
+- 以下の出力フォーマットは自動的に検出・反映されます。
+
+【ステータス反映フォーマット】
+① HP/FP変動
+   戦闘やイベントでHP/FPが変動した場合、文章の最後にタグを出力:
+   [HP:-3] [FP:-1] [HP:+2]
+   例: 「鋭い爪が肩を裂いた。[HP:-5]」
+
+② CP購入（能力値・技能・特徴）
+   プレイヤーの依頼を審査し、妥当と判断した場合に /buy コマンドを行頭に出力:
+   能力値は絶対値指定（推奨）: /buy DX 14  /buy IQ 12
+   能力値は増分指定: /buy ST +1  /buy DX -1
+   技能: /buy 剣 A 4 dx
+   有利特徴: /buy 利:容姿端麗 5
+   不利特徴: /buy 不利:小心 -15
+   各行1コマンド、説明文とは別の行に記述。
+   【重要】能力値は絶対値（/buy DX 14）で指定してください。増分指定（/buy DX +4）は現在値に加算されるため、再実行時に重複して加算されます。
+
+③ NPC追加
+   ストーリー上必要と判断した場合、/npcadd を行頭に出力:
+   /npcadd エルフの旅人 12 14 11 13
+
+④ 判定実行
+   /roll 目標値 [+-修正]
+
 【進行ルール】
 1. プレイヤーの行動やダイス結果に基づき、物語を情景豊かに描写してください。
 2. ダイスの結果（成功度・失敗度・クリティカル・ファンブル）に合わせて、展開のドラマチックさを変化させてください。
@@ -232,36 +268,14 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
    - 失敗度が高い (-4以上): 深刻な失敗や裏目
    - ファンブル: 武器破壊、体勢崩壊、予期せぬ大ドジ
 3. 描写の終わりには、次にプレイヤーが取れる行動の提案や問いかけを含めてください。
-4. 戦闘やイベントでプレイヤーのHPやFPが変動した場合、文章の最後に以下の形式でタグを出力してください（複数可）。
-   [HP:-3] [FP:-1] [HP:+2]
-5. NPCとして発言する場合は、必ず以下の形式でNPC名を先頭に付けてください。
+4. NPCとして発言する場合は、必ず以下の形式でNPC名を先頭に付けてください。
    【村長】ようこそ、旅人よ。
    この場合、画面上は「村長（マスター）」と表示されます。
-6. プレイヤーはCP（キャラクターポイント）を使って能力値や技能を購入します。
-   - 基本CP: 100、能力値: ST/HT=±10CP, DX/IQ=±20CP, HP±1=2CP, FP±1=3CP
-   - 技能は難度(Easy/Average/Hard)に応じCPで購入
-   - プレイヤーが「/buy 剣 A 2 dx」のようにCP購入を宣言できます（末尾のdxは基準属性、省略時はIQ）
-   - プレイヤーから技能や能力値の質問（「剣を取るのにいくらCPが必要？」等）にはGMとして適切にアドバイスしてください。
-7. 【重要】あなたの応答に含まれる /buy コマンドは自動検出され、キャラクターシートに即座に反映されます。
-   - プレイヤーの意向を聞いた上で、以下を出力してください（各行を独立した /buy コマンドとして検出します）:
-     例: 「/buy ST +1」
-     例: 「/buy DX -1」
-     例: 「/buy 剣 A 4 dx」
-     例: 「/buy 利:容姿端麗 5」
-     例: 「/buy 不利:小心 -15」
-   - コマンドは行頭に記述し、各行1コマンドとして出力してください。
-   - 説明文とは別の行に分けて記述すれば、自動反映後に説明文としても機能します。
-8. プレイヤーが使用可能なコマンド（あなたも応答内で使用できます）:
-   - "/buy 技能名 E/A/H CP [st/dx/iq/ht]" - 技能購入
-   - "/buy 利:特徴名 CP" - 有利な特徴を購入
-   - "/buy 不利:特徴名 -CP" - 不利な特徴を取得（CP獲得）
-   - "/buy ST/DX/IQ/HT +1" - 能力値上昇（-1で低下）
-   - "/buy HP +2" / "/buy FP +1" - HP/FP上限変更
-   - "/npcadd 名前 ST DX IQ HT" - NPC追加
-   - "/npc 名前 発言" - NPCとして発言
-   - "/roll 目標値 [+-修正]" - 3D6判定
-   - "/rule テキスト" - カスタムルール保存
-9. プレイヤーはカスタムルールを「/rule テキスト」で保存できます。`;
+5. プレイヤーはカスタムルールを「/rule テキスト」で保存できます。
+6. プレイヤーから技能や能力値の相談があった場合は、現在のキャラクター情報（残CP・現在値）を確認し、ルールに従って判断した上で /buy コマンドを出力してください。
+7. セッション開始時や初心者プレイヤーに対しては、積極的にキャラクターメイクをガイドしてください。名前・役割・得意なことなどを尋ね、GURPSのルールに沿ってステータスを構築する問答を行ってください。
+8. 【重要】CP予算は基本100CPです。/buy コマンドを出力する前に、必ず現在の残CPを確認し、予算を超えないように調整してください。能力値・技能・特徴の合計が100CPに収まるように計画すること。ストーリー上のイベント（戦闘ダメージ・報酬・成長・呪い・治療など）に応じて、積極的に HP/FPタグや /buy を出力しステータスを管理してください。常にルールに則って判断すること。
+9. プレイヤーが強さや技能レベルを尋ねてきた場合は、現在のキャラクター情報を参照して適切にアドバイスしてください。`;
 
 const WORLD_SYSTEM_PROMPT = 'あなたはTRPGの世界設定を創作するプロのワールドビルダーです。必ず日本語のみで出力してください。英単語や他言語を混ぜないでください。固有名詞もすべて日本語またはカタカナで表記すること。';
 
@@ -280,7 +294,7 @@ const GURPS_RULES_REFERENCE = `
 ■ 対抗判定（Quick Contest）
 - 両者成功判定、成功比が高い方が勝利
 
-■ キャラクター作成（基本CP: 150）
+■ キャラクター作成（基本CP: 100）
 - ST/HT: ±10CP/レベル（基本値10）
 - DX/IQ: ±20CP/レベル（基本値10）
 - HP: STを基準に±2CP/レベル
@@ -550,7 +564,7 @@ const GURPS_NPC = {
 
 // ============================================================
 const STATE_DEFAULTS = {
-  apiKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free',
+  apiKey: '', model: 'nvidia/nemotron-3-super-120b-a12b:free',
   char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false
 };
 // ============================================================
@@ -558,7 +572,7 @@ const STORAGE_KEY = 'gurps_ai_trpg_state';
 
 let state = {
   apiKey: '',
-  model: 'meta-llama/llama-3.3-70b-instruct:free',
+  model: 'nvidia/nemotron-3-super-120b-a12b:free',
   char: GURPS_CHAR.fresh(),
   skills: [],
   advantages: [],
@@ -577,11 +591,13 @@ function loadState() {
     if (raw) {
       const saved = JSON.parse(raw);
       state.apiKey = saved.apiKey || '';
-      state.model = saved.model || 'meta-llama/llama-3.3-70b-instruct:free';
-      if (state.model === 'openrouter/free') state.model = 'meta-llama/llama-3.3-70b-instruct:free';
+      state.model = saved.model || 'nvidia/nemotron-3-super-120b-a12b:free';
+      var deprecatedModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'qwen/qwen3-8b-instruct:free'];
+      if (deprecatedModels.indexOf(state.model) !== -1) state.model = 'nvidia/nemotron-3-super-120b-a12b:free';
       state.char = saved.char || GURPS_CHAR.fresh();
       if (state.char.nameLocked === undefined) state.char.nameLocked = false;
       if (state.char.totalCp === undefined) state.char.totalCp = 100;
+      if (state.char.totalCp > 100) state.char.totalCp = 100; // 旧150CPデータを100に移行
       if (state.char.will === undefined) state.char.will = state.char.iq;
       if (state.char.per === undefined) state.char.per = state.char.iq;
       if (!state.char.hpMax) state.char.hpMax = state.char.st;
@@ -599,7 +615,7 @@ function loadState() {
       state.worldCreated = saved.worldCreated || false;
     } else {
       Object.assign(state, {
-        apiKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free',
+  apiKey: '', model: 'nvidia/nemotron-3-super-120b-a12b:free',
         char: GURPS_CHAR.fresh(), skills: [], advantages: [], npcs: [], customSettings: [], messages: [], worldCreated: false
       });
     }
@@ -705,7 +721,7 @@ function renderSkills() {
   var container = $el('skills-list');
   container.innerHTML = '';
   if (!state.skills.length) {
-    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">チャットで /buy 技能名 (難度) CP と入力して購入</div>';
+    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">GMが状況に応じて管理します</div>';
     return;
   }
   state.skills.forEach(function(skill, i) {
@@ -726,7 +742,7 @@ function renderAdvantages() {
   var container = $el('advantages-list');
   container.innerHTML = '';
   if (!state.advantages.length) {
-    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">チャットで /buy 利:特徴名 CP または /buy 不利:特徴名 -CP と入力</div>';
+    container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">GMが状況に応じて管理します</div>';
     return;
   }
   state.advantages.forEach(function(adv) {
@@ -760,8 +776,9 @@ function buildContextString(name, base, mod, roll, evalResult) {
 // ============================================================
 // MODULE 3: チャットコマンド処理
 // ============================================================
-var chatMode = 'pl'; // 'pl' = プレイヤー, 'pc' = キャラクター
-
+  var chatMode = 'pl'; // 'pl' = プレイヤー, 'pc' = キャラクター
+  var API_BASE = localStorage.getItem('gurps_api_base') || '';
+  var DIRECT_MODE = !API_BASE;
 function cycleChatMode() {
   if (!state.char.name || state.char.nameLocked) {
     chatMode = 'pl';
@@ -821,32 +838,35 @@ function handleBuyCommand(text) {
     return true;
   }
 
-  var attrMatch = text.match(/^\/buy\s+(ST|DX|IQ|HT|HP|FP)\s*([+-]\d+)$/);
+  var attrMatch = text.match(/^\/buy\s+(ST|DX|IQ|HT|HP|FP)\s*([+-]?\d+)$/);
   if (attrMatch) {
     var what = attrMatch[1];
-    var delta = parseInt(attrMatch[2]);
+    var raw = attrMatch[2];
+    var isDelta = /^[+-]/.test(raw);
+    var delta = parseInt(raw);
     if (what === 'ST' || what === 'DX' || what === 'IQ' || what === 'HT') {
       var attr = what.toLowerCase();
-      var newVal = state.char[attr] + delta;
+      var newVal = isDelta ? state.char[attr] + delta : delta;
       if (newVal < 1 || newVal > 20) { showToast(what + 'は1～20の範囲です', 'error'); return; }
       var cpDelta = GURPS_CHAR.calcAttrCpDelta(attr, newVal);
       if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
       var hpDiff = state.char.hpMax - state.char.st;
       var fpDiff = state.char.fpMax - state.char.ht;
+      var oldVal = state.char[attr];
       state.char[attr] = newVal;
       state.char.hpMax = state.char.st + Math.max(0, hpDiff);
       state.char.fpMax = state.char.ht + Math.max(0, fpDiff);
       if (state.char.hp > state.char.hpMax) state.char.hp = state.char.hpMax;
       if (state.char.fp > state.char.fpMax) state.char.fp = state.char.fpMax;
       var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
-      addMessage('system', '【CP変更】' + what + ' ' + delta + ' (' + costLabel + ')');
+      addMessage('system', '【CP変更】' + what + ' ' + oldVal + '→' + newVal + ' (' + costLabel + ')');
       updateCharDisplay();
       saveState();
-      showToast(what + 'を' + delta + 'しました', '');
+      showToast(what + 'を' + (isDelta ? delta : newVal) + 'しました', '');
       return true;
     }
     if (what === 'HP') {
-      var newHpMax = state.char.hpMax + delta;
+      var newHpMax = isDelta ? state.char.hpMax + delta : delta;
       if (newHpMax < 1 || newHpMax > 40) { showToast('HPは1～40の範囲です', 'error'); return; }
       var cpDelta = GURPS_CHAR.calcHpCpDelta(newHpMax);
       if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
@@ -861,7 +881,7 @@ function handleBuyCommand(text) {
       return true;
     }
     if (what === 'FP') {
-      var newFpMax = state.char.fpMax + delta;
+      var newFpMax = isDelta ? state.char.fpMax + delta : delta;
       if (newFpMax < 1 || newFpMax > 40) { showToast('FPは1～40の範囲です', 'error'); return; }
       var cpDelta = GURPS_CHAR.calcFpCpDelta(newFpMax);
       if (!GURPS_CHAR.canAfford(cpDelta)) { showToast('CPが不足しています', 'error'); return; }
@@ -1089,7 +1109,7 @@ async function createWorld() {
 
   var tags = [];
   selectedTags.forEach(function(t) { tags.push(t); });
-  var prompt = '【世界創成】\n以下のタグに基づき、TRPGセッションの世界を創作してください。\n\n選択されたタグ: ' + tags.join(', ') + '\n\n【重要】\n- 必ず日本語のみで出力（英単語・他言語禁止）\n- プレイヤーキャラクターが知り得ない情報は出力しないこと\n- 世界の裏設定やメタ的な説明は一切含めない\n- 「この世界では〜」「本作は〜」のような俯瞰説明は禁止\n- 今プレイヤーが見聞きできることだけを、一人称視点で描写\n\n以下の形式で出力：\n1. **世界名**（太字）\n2. 世界観の概要（2-3文、プレイヤーが知っている範囲で）\n3. あなたが今いる場所と情景描写\n4. あなたの目前で起きている出来事\n5. 最初にあなたは何をしますか？という問いかけ';
+  var prompt = '【世界創成】\n以下のタグに基づき、TRPGセッションの世界を創作してください。\n\n選択されたタグ: ' + tags.join(', ') + '\n\n【重要】\n- 必ず日本語のみで出力（英単語・他言語禁止）\n- プレイヤーキャラクターが知り得ない情報は出力しないこと\n- 世界の裏設定やメタ的な説明は一切含めない\n- 「この世界では〜」「本作は〜」のような俯瞰説明は禁止\n- 今プレイヤーが見聞きできることだけを、一人称視点で描写\n\n以下の形式で出力：\n1. **世界名**（太字）\n2. 世界観の概要（2-3文、プレイヤーが知っている範囲で）\n3. あなたが今いる場所と情景描写\n4. あなたの目前で起きている出来事\n5. プレイヤーキャラクター作成に移ること。名前・見た目・役割・得意なこと・性格などを尋ね、GURPSのルールに沿ってステータスを決めるための問答を始めてください。「まずはあなたのキャラクターについて教えてください」のような形で自然に誘導すること。';
 
   var modelName = $el('model-select').value;
   var requestBody = {
@@ -1136,7 +1156,7 @@ async function createWorld() {
       if (res.status === 401) errMsg = '認証エラー: APIキーが無効です';
       else if (res.status === 429) errMsg = 'レート制限: しばらく待ってから再試行してください';
       else if (res.status === 402) errMsg = 'APIの残高が不足しています';
-      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。';
+      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。別のモデルを選択してください。';
       if (errBody) errMsg += '\n' + errBody;
       throw new Error(errMsg);
     }
@@ -1162,6 +1182,79 @@ async function createWorld() {
   }
 }
 
+// ========== Worker API Mode ==========
+async function fetchCharFromWorker() {
+  if (!API_BASE) return;
+  try {
+    var res = await fetch(API_BASE + '/api/character');
+    if (!res.ok) return;
+    var data = await res.json();
+    state.char.name = data.name || '';
+    state.char.st = data.st; state.char.dx = data.dx; state.char.iq = data.iq; state.char.ht = data.ht;
+    state.char.hp = data.hp; state.char.hpMax = data.hpMax; state.char.fp = data.fp; state.char.fpMax = data.fpMax;
+    state.char.totalCp = data.totalCp;
+    state.char.will = data.will; state.char.per = data.per;
+    state.skills = data.skills || [];
+    state.advantages = data.advantages || [];
+    updateCharDisplay(); renderSkills(); renderAdvantages();
+  } catch(e) { console.warn('[worker] fetchChar failed:', e); }
+}
+
+async function sendMessageWorker(text) {
+  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  if (!apiKey) { showToast('APIキーを設定してください', 'warn'); return; }
+  state.apiKey = apiKey;
+
+  addMessage('player', text);
+  renderChat();
+  saveState();
+  showLoading(true);
+
+  try {
+    var modelName = $el('model-select').value;
+    var res = await fetch(API_BASE + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, apiKey: apiKey, model: modelName })
+    });
+    if (!res.ok) { var e = await res.text(); throw new Error(e); }
+    var data = await res.json();
+
+    // Update character from response
+    if (data.character) {
+      var c = data.character;
+      state.char.st = c.st; state.char.dx = c.dx; state.char.iq = c.iq; state.char.ht = c.ht;
+      state.char.hp = c.hp; state.char.hpMax = c.hpMax; state.char.fp = c.fp; state.char.fpMax = c.fpMax;
+      state.char.totalCp = c.totalCp; state.char.will = c.will; state.char.per = c.per;
+      if (c.name) state.char.name = c.name;
+    }
+    state.skills = data.skills || [];
+    state.advantages = data.advantages || [];
+
+    addMessage('gm', data.reply || '（応答が空でした）');
+    renderChat();
+    updateCharDisplay(); renderSkills(); renderAdvantages();
+    saveState();
+
+    if (data.toolResults) {
+      for (var tr = 0; tr < data.toolResults.length; tr++) {
+        var r = data.toolResults[tr];
+        if (!r.result.success && r.result.message) {
+          addMessage('system', '【' + r.name + '】' + r.result.message);
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error('[worker] sendMessage error:', err);
+    showToast(err.message || '通信エラー', 'error');
+  } finally {
+    showLoading(false);
+    $el('send-btn').disabled = false;
+    $el('chat-input').focus();
+  }
+}
+
 async function sendMessage() {
   var input = $el('chat-input');
   var text = input.value.trim();
@@ -1171,13 +1264,7 @@ async function sendMessage() {
   if (!apiKey) { showToast('APIキーを入力してください', 'warn'); return; }
   state.apiKey = apiKey;
 
-  if (text.startsWith('/buy ')) {
-    if (handleBuyCommand(text)) {
-      input.value = ''; input.style.height = 'auto'; renderChat(); saveState();
-    }
-    return;
-  }
-
+  // Local commands (work in both modes)
   var npcAdd = text.match(/^\/npcadd\s+(\S+)(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?(?:\s+(\d+))?/);
   if (npcAdd) {
     var npc = GURPS_NPC.create(npcAdd[1], {
@@ -1220,6 +1307,8 @@ async function sendMessage() {
   } else if (chatMode === 'pc' && state.char.name && state.char.nameLocked) {
     text = '【' + state.char.name + '】' + text;
   }
+
+  if (!DIRECT_MODE) { input.value = ''; input.style.height = 'auto'; sendMessageWorker(text); return; }
 
   input.value = '';
   input.style.height = 'auto';
@@ -1314,7 +1403,7 @@ async function sendMessage() {
       if (res.status === 401) errMsg = '認証エラー: APIキーが無効です';
       else if (res.status === 429) errMsg = 'レート制限: しばらく待ってから再試行してください';
       else if (res.status === 402) errMsg = 'APIの残高が不足しています';
-      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。';
+      else if (res.status === 404) errMsg = 'モデルが見つかりません。モデル名が古い可能性があります。別のモデルを選択してください。';
       if (errBody) errMsg += '\n' + errBody;
       throw new Error(errMsg);
     }
@@ -1330,9 +1419,12 @@ async function sendMessage() {
     addMessage('gm', reply);
     var buyLines = reply.match(/^\/buy\s+.+$/gm);
     if (buyLines) {
+      var before = GURPS_CHAR.calcTotalUsedCp();
       for (var bl = 0; bl < buyLines.length; bl++) {
         handleBuyCommand(buyLines[bl].trim());
       }
+      var after = GURPS_CHAR.calcTotalUsedCp();
+      if (after === before) addMessage('system', '【購入注意】/buy コマンドが適用されませんでした。予算や形式を確認してください。');
     }
     renderChat();
     saveState();
@@ -1576,6 +1668,17 @@ function init() {
 
   $el('api-key').addEventListener('input', function() { state.apiKey = this.value; saveState(); });
   $el('model-select').addEventListener('change', function() { state.model = this.value; saveState(); });
+
+  var apiBaseInput = $el('api-base');
+  if (apiBaseInput) {
+    apiBaseInput.value = API_BASE;
+    apiBaseInput.addEventListener('input', function() {
+      API_BASE = this.value.trim();
+      DIRECT_MODE = !API_BASE;
+      localStorage.setItem('gurps_api_base', API_BASE);
+      if (API_BASE) fetchCharFromWorker();
+    });
+  }
 
   var chatInput = $el('chat-input');
   chatInput.addEventListener('keydown', function(e) {
