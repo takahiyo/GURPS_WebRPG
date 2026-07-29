@@ -907,6 +907,7 @@ function handleBuyCommand(text) {
       state.char[attr] = newVal;
       state.char.hpMax = state.char.st + Math.max(0, hpDiff);
       state.char.fpMax = state.char.ht + Math.max(0, fpDiff);
+      if (attr === 'iq') { state.char.will += (newVal - oldVal); state.char.per += (newVal - oldVal); }
       if (state.char.hp > state.char.hpMax) state.char.hp = state.char.hpMax;
       if (state.char.fp > state.char.fpMax) state.char.fp = state.char.fpMax;
       var costLabel = cpDelta >= 0 ? (cpDelta + 'CP消費') : (Math.abs(cpDelta) + 'CP戻り');
