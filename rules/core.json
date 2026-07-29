@@ -1,0 +1,23 @@
+{
+  "title": "GURPS Lite 4th Edition",
+  "version": "1.0",
+  "cpBudget": 100,
+  "attributes": {
+    "st": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "筋力(ST)", "promptLine": "ST/HT: ±10CP/レベル（基本値10）" },
+    "dx": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "敏捷性(DX)", "promptLine": "DX/IQ: ±20CP/レベル（基本値10）" },
+    "iq": { "base": 10, "costPerLevel": 20, "min": 1, "max": 20, "label": "知力(IQ)", "promptLine": "" },
+    "ht": { "base": 10, "costPerLevel": 10, "min": 1, "max": 20, "label": "生命力(HT)", "promptLine": "" }
+  },
+  "secondaries": {
+    "hp": { "baseAttr": "st", "costPerLevel": 2, "min": 1, "max": 40, "label": "HP", "promptLine": "HP: STを基準に±2CP/レベル" },
+    "fp": { "baseAttr": "ht", "costPerLevel": 3, "min": 1, "max": 40, "label": "FP", "promptLine": "FP: HTを基準に±3CP/レベル" },
+    "will": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "意志(Will)", "promptLine": "意志(Will)・知覚(Per): IQ基準（別途購入は±5CP）" },
+    "per": { "baseAttr": "iq", "costPerLevel": 5, "min": 1, "max": 20, "label": "知覚(Per)", "promptLine": "" }
+  },
+  "derived": [
+    { "key": "basicSpeed", "label": "基本速度", "formula": "(DX+HT)/4", "promptLine": "基本速度(Basic Speed) = (DX+HT)/4" },
+    { "key": "basicMove", "label": "移動力", "formula": "基本速度の整数部", "promptLine": "移動力(Basic Move) = 基本速度の整数部" },
+    { "key": "dodge", "label": "よけ", "formula": "基本速度+3（端数切捨て）", "promptLine": "よけ(Dodge) = 基本速度+3（端数切捨て）" },
+    { "key": "basicLift", "label": "基本リフト", "formula": "(ST×ST)/5", "unit": "ポンド", "promptLine": "基本リフト(BL) = (ST*ST)/5 ポンド" }
+  ]
+}

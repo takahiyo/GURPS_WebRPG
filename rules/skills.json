@@ -1,0 +1,10 @@
+{
+  "description": "技能コスト表 / Skill Cost Table",
+  "difficulties": {
+    "E": { "label": "易(Easy)", "costTable": { "1": -1, "2": 0, "4": 1, "8": 2, "12": 3, "16": 4, "20": 5, "24": 6, "28": 7 }, "promptLine": "Easy: 1CP=属性-1, 2CP=属性+0, 4CP=属性+1, 以降+4CPで+1" },
+    "A": { "label": "並(Average)", "costTable": { "1": -2, "2": -1, "4": 0, "8": 1, "12": 2, "16": 3, "20": 4, "24": 5, "28": 6 }, "promptLine": "Average: 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1" },
+    "H": { "label": "難(Hard)", "costTable": { "0": -3, "1": -2, "2": -1, "4": 0, "8": 1, "12": 2, "16": 3, "20": 4, "24": 5, "28": 6 }, "promptLine": "Hard: 0CP=属性-3, 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1" }
+  },
+  "validCpLevels": [0, 1, 2, 4, 8, 12, 16, 20, 24, 28],
+  "defaultAttr": "iq"
+}

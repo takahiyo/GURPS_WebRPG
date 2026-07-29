@@ -115,6 +115,10 @@ tailwind.config = { darkMode: 'class' }
         <div id="custom-rules-list" class="space-y-1"></div>
       </div>
 
+      <button onclick="toggleRulesModal()" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/60 rounded-lg transition-colors">
+        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>ルール参照
+      </button>
+
     </div>
 
     <div class="border-t border-gray-200 dark:border-gray-800">
@@ -148,6 +152,19 @@ tailwind.config = { darkMode: 'class' }
       </div>
     </div>
   </aside>
+
+  <!-- ルール参照モーダル -->
+  <div id="rules-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="if(event.target===this)closeRulesModal()">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto border border-gray-200 dark:border-gray-700 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-sm font-bold text-gray-800 dark:text-gray-100">ルールリファレンス</span>
+        <button onclick="closeRulesModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div id="rules-modal-body" class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+        ${GURPS_RULES_REFERENCE || '（ルール読み込み中...）'}
+      </div>
+    </div>
+  </div>
 
   <main class="flex-1 flex flex-col min-w-0 h-screen">
     <header class="flex items-center justify-between px-4 py-2 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800 backdrop-blur-sm transition-colors">
@@ -223,6 +240,8 @@ tailwind.config = { darkMode: 'class' }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
 </script>
+<script src="js/gurps-rules.js">
+</script>
 <script>
 marked.setOptions({ breaks: true, gfm: true, mangle: false, headerIds: false });
 
@@ -284,68 +303,14 @@ const SYSTEM_PROMPT_GM = `あなたはGURPS（ガープス）TRPGの優秀で臨
 
 const WORLD_SYSTEM_PROMPT = 'あなたはTRPGの世界設定を創作するプロのワールドビルダーです。必ず日本語のみで出力してください。英単語や他言語を混ぜないでください。固有名詞もすべて日本語またはカタカナで表記すること。';
 
-// ============================================================
-// GURPS Lite 4th Edition 基本ルール参照データ
-// ============================================================
-const GURPS_RULES_REFERENCE = `
-【GURPS Lite 4th Edition 基本ルール】
-
-■ 成功判定（3D6）
-- 3D6の合計 <= 実効スキルで成功
-- クリティカル成功: 出目3-4は常に成功。実効スキル15以上で出目5も、16以上で出目6も成功。
-- クリティカル失敗: 出目18は常に失敗。スキル15以下で出目17も失敗。スキルより10以上高い出目も失敗。
-- 成功比（Margin）= 実効スキル - 出目
-
-■ 対抗判定（Quick Contest）
-- 両者成功判定、成功比が高い方が勝利
-
-■ キャラクター作成（基本CP: 100）
-- ST/HT: ±10CP/レベル（基本値10）
-- DX/IQ: ±20CP/レベル（基本値10）
-- HP: STを基準に±2CP/レベル
-- FP: HTを基準に±3CP/レベル
-- 意志(Will)・知覚(Per): IQ基準（別途購入は±5CP）
-
-■ 二次的特性
-- 基本速度(Basic Speed) = (DX+HT)/4
-- 移動力(Basic Move) = 基本速度の整数部
-- よけ(Dodge) = 基本速度+3（端数切捨て）
-- 基本リフト(BL) = (ST*ST)/5 ポンド
-
-■ 技能コスト表
-- Easy: 1CP=属性-1, 2CP=属性+0, 4CP=属性+1, 以降+4CPで+1
-- Average: 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1
-- Hard: 0CP=属性-3, 1CP=属性-2, 2CP=属性-1, 4CP=属性+0, 以降+4CPで+1
-
-■ ST別基本ダメージ
-  ST | 突き(Thr) | 振り(Sw)
-  10 | 1d-2      | 1d
-  11 | 1d-1      | 1d+1
-  12 | 1d-1      | 1d+2
-  13 | 1d        | 2d-1
-  14 | 1d        | 2d
-
-■ 戦闘
-- 攻撃: 武器スキルで命中判定（3D6 <= 技能レベル）
-- 能動防御（1回/ターン）:
-  - よけ: 基本速度+3 - 重荷修正
-  - 受け: (技能/2)+3（切捨て）
-  - 止め: (盾技能/2)+3（切捨て）
-- 負傷倍率: 刺し×2.0, 切り×1.5, 叩き×1.0, 大型貫通×1.5, 小口径×0.5
-- 防護点(DR): 減算後、負傷倍率適用
-
-■ 状態変化
-- 衝撃(Shock): ダメージ次ターン、負傷HP分（最大-4）のDX/IQペナルティ
-- HP0以下: 毎ターンHT判定、失敗で気絶
-- HP -1×ST: 即死判定(HT)
-- HP -5×ST: 即死
-
-■ 重荷修正（BL基準）
-- 軽(1): 2xBL以下, 移動×0.8, よけ-1
-- 並(2): 3xBL以下, 移動×0.6, よけ-2
-- 重(3): 6xBL以下, 移動×0.4, よけ-3
-- 超(4): 10xBL以下, 移動×0.2, よけ-4
-`;
+// GURPS_RULES_REFERENCE は GURPS_RULES エンジンから自動生成
+// 未ロード時のフォールバックとして空文字
+var GURPS_RULES_REFERENCE = '';
+function _updateRulesRef() {
+  if (typeof GURPS_RULES !== 'undefined' && GURPS_RULES.ready()) {
+    GURPS_RULES_REFERENCE = GURPS_RULES.buildReferenceText();
+  }
+}
 
 const WORLD_TAGS = {
   '世界観': ['ファンタジー', 'SF', '現代', '学園', '和風', '異世界', '中世', '近未来', '終末世界', '古代文明', '宇宙', '海辺', '楽園', '迷宮都市'],
@@ -415,8 +380,37 @@ const GURPS_CHAR = {
     H: { 0: -3, 1: -2, 2: -1, 4: 0, 8: 1, 12: 2, 16: 3, 20: 4, 24: 5, 28: 6 }
   },
   skillLevels: [0, 1, 2, 4, 8, 12, 16, 20, 24, 28],
+  // 注: 以下のメソッドは GURPS_RULES エンジンに委譲可能だが、
+  // 互換性のため現在は直接定義。段階的に GURPS_RULES へ移行する。
+  // 移行後は GURPS_RULES.init() 完了後に以下の定数が自動設定される。
+  _initFromRules: function() {
+    if (typeof GURPS_RULES === 'undefined' || !GURPS_RULES.ready()) return;
+    var R = GURPS_RULES;
+    this.ATTR_COST.st = R.attrCostPerLevel('st');
+    this.ATTR_COST.dx = R.attrCostPerLevel('dx');
+    this.ATTR_COST.iq = R.attrCostPerLevel('iq');
+    this.ATTR_COST.ht = R.attrCostPerLevel('ht');
+    this.HP_COST = R.secondaryCostPerLevel('hp');
+    this.FP_COST = R.secondaryCostPerLevel('fp');
+    this.skillLevels = R.skillValidCpLevels();
+    this.attrLabel.st = R.attrLabel('st');
+    this.attrLabel.dx = R.attrLabel('dx');
+    this.attrLabel.iq = R.attrLabel('iq');
+    this.attrLabel.ht = R.attrLabel('ht');
+    this.skillDiffLabel.E = R.skillLabel('E');
+    this.skillDiffLabel.A = R.skillLabel('A');
+    this.skillDiffLabel.H = R.skillLabel('H');
+    // skillCpToLevel の参照を再構築
+    for (var d in ['E','A','H']) {
+      var tbl = R.getSkillCostTable(d);
+      if (tbl) this.skillCpToLevel[d] = tbl;
+    }
+  },
 
   skillCpForLevel: function(diff, attrVal, targetLevel) {
+    if (typeof GURPS_RULES !== 'undefined' && GURPS_RULES.ready()) {
+      return GURPS_RULES.skillCpForLevel(diff, attrVal, targetLevel);
+    }
     var table = this.skillCpToLevel[diff] || this.skillCpToLevel.A;
     var neededBonus = targetLevel - attrVal;
     var bestCp = 999;
@@ -1707,6 +1701,21 @@ function toggleSidebar() {
   document.body.classList.toggle('overflow-hidden', !isOpen);
 }
 
+function toggleRulesModal() {
+  var modal = $el('rules-modal');
+  modal.classList.toggle('hidden');
+  if (!modal.classList.contains('hidden')) {
+    var body = $el('rules-modal-body');
+    if (typeof GURPS_RULES !== 'undefined' && GURPS_RULES.ready()) {
+      body.textContent = GURPS_RULES.buildReferenceText();
+    } else {
+      body.textContent = GURPS_RULES_REFERENCE || '（ルール読み込み中...）';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+function closeRulesModal() { $el('rules-modal').classList.add('hidden'); }
+
 function init() {
   console.log('[init] ==== GURPS AI TRPG GM Startup ====');
   console.log('[init] User Agent:', navigator.userAgent);
@@ -1714,6 +1723,20 @@ function init() {
   console.log('[init] Protocol:', window.location.protocol);
   console.log('[init] Origin:', window.location.origin);
   console.log('[init] localStorage available:', typeof localStorage !== 'undefined');
+
+  // GURPS_RULES 初期化（rules/*.json を読み込み）
+  if (typeof GURPS_RULES !== 'undefined' && !GURPS_RULES.ready()) {
+    GURPS_RULES.init(window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '')).then(function() {
+      _updateRulesRef();
+      GURPS_CHAR._initFromRules();
+      updateCharDisplay();
+      renderSkills();
+      renderAdvantages();
+      console.log('[init] GURPS_RULES loaded from JSON');
+    });
+  } else {
+    _updateRulesRef();
+  }
 
   var savedTheme = localStorage.getItem('theme');
   console.log('[init] Saved theme:', savedTheme);
@@ -1782,7 +1805,7 @@ function init() {
   chatInput.addEventListener('focus', scrollToBottom);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   console.log('[DOM] DOMContentLoaded fired');
   console.log('[DOM] lucide available:', typeof lucide !== 'undefined');
   console.log('[DOM] marked available:', typeof marked !== 'undefined');
