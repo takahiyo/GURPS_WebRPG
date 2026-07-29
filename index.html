@@ -135,6 +135,10 @@ tailwind.config = { darkMode: 'class' }
             <option value="openai/gpt-oss-20b:free">GPT-OSS 20B (free)</option>
             <option value="inclusionai/ling-3.0-flash:free">Ling 3.0 Flash (free)</option>
             <option value="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free">Nemotron 3 Nano Omni (free)</option>
+            <option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash (有料)</option>
+            <option value="deepseek/deepseek-v3.2">DeepSeek V3.2 (有料)</option>
+            <option value="deepseek/deepseek-chat">DeepSeek V3 (有料)</option>
+            <option value="deepseek/deepseek-r1">DeepSeek R1 (有料)</option>
           </select>
         </div>
         <div>
@@ -1102,8 +1106,9 @@ function toggleTag(el, tag) {
 
 async function createWorld() {
   if (selectedTags.size === 0) return;
-  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  var apiKey = ($el('api-key').value.trim() || state.apiKey).replace(/[^\x20-\x7E]/g, '');
   if (!apiKey) { showToast('APIキーを設定してください', 'warn'); closeWorldModal(); return; }
+  $el('api-key').value = apiKey;
   state.apiKey = apiKey;
   closeWorldModal();
 
@@ -1201,8 +1206,9 @@ async function fetchCharFromWorker() {
 }
 
 async function sendMessageWorker(text) {
-  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  var apiKey = ($el('api-key').value.trim() || state.apiKey).replace(/[^\x20-\x7E]/g, '');
   if (!apiKey) { showToast('APIキーを設定してください', 'warn'); return; }
+  $el('api-key').value = apiKey;
   state.apiKey = apiKey;
 
   addMessage('player', text);
@@ -1260,8 +1266,9 @@ async function sendMessage() {
   var text = input.value.trim();
   if (!text || isStreaming) return;
 
-  var apiKey = $el('api-key').value.trim() || state.apiKey;
+  var apiKey = ($el('api-key').value.trim() || state.apiKey).replace(/[^\x20-\x7E]/g, '');
   if (!apiKey) { showToast('APIキーを入力してください', 'warn'); return; }
+  $el('api-key').value = apiKey;
   state.apiKey = apiKey;
 
   // Local commands (work in both modes)
