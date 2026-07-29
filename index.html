@@ -72,25 +72,25 @@ tailwind.config = { darkMode: 'class' }
           <span>使用 <span id="cp-used" class="text-blue-500 font-semibold">0</span></span>
           <span>未使用 <span id="cp-free" class="text-green-500 font-semibold">150</span></span>
         </div>
-        <div class="grid grid-cols-4 gap-1.5">
-          <div><label class="block text-[10px] text-gray-400">ST (筋力)</label><div id="stat-st" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
-          <div><label class="block text-[10px] text-gray-400">DX (敏捷性)</label><div id="stat-dx" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
-          <div><label class="block text-[10px] text-gray-400">IQ (知力)</label><div id="stat-iq" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
-          <div><label class="block text-[10px] text-gray-400">HT (生命力)</label><div id="stat-ht" class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-1 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold">10</div></div>
+        <div class="grid grid-cols-4 gap-1">
+          <div><label class="block text-[10px] text-gray-400">ST (筋力)</label><div class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold"><span id="stat-st">10</span> <span id="cp-st" class="text-[9px] text-gray-400">±0CP</span></div></div>
+          <div><label class="block text-[10px] text-gray-400">DX (敏捷性)</label><div class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold"><span id="stat-dx">10</span> <span id="cp-dx" class="text-[9px] text-gray-400">±0CP</span></div></div>
+          <div><label class="block text-[10px] text-gray-400">IQ (知力)</label><div class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold"><span id="stat-iq">10</span> <span id="cp-iq" class="text-[9px] text-gray-400">±0CP</span></div></div>
+          <div><label class="block text-[10px] text-gray-400">HT (生命力)</label><div class="w-full bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-xs text-center text-gray-700 dark:text-gray-300 font-semibold"><span id="stat-ht">10</span> <span id="cp-ht" class="text-[9px] text-gray-400">±0CP</span></div></div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-[10px] text-gray-400">HP</label>
+            <label class="block text-[10px] text-gray-400">HP <span id="cp-hp" class="text-[9px] text-gray-400">±0CP</span></label>
             <span id="hp-display" class="block w-full text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5">10/10</span>
           </div>
           <div>
-            <label class="block text-[10px] text-gray-400">FP</label>
+            <label class="block text-[10px] text-gray-400">FP <span id="cp-fp" class="text-[9px] text-gray-400">±0CP</span></label>
             <span id="fp-display" class="block w-full text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5">10/10</span>
           </div>
         </div>
         <div class="grid grid-cols-4 gap-1 text-[10px] text-gray-400">
-          <div>意志 <span id="stat-will" class="text-gray-600 dark:text-gray-300 font-semibold">10</span></div>
-          <div>知覚 <span id="stat-per" class="text-gray-600 dark:text-gray-300 font-semibold">10</span></div>
+          <div>意志 <span id="stat-will" class="text-gray-600 dark:text-gray-300 font-semibold">10</span> <span id="cp-will" class="text-[9px] text-gray-400">±0CP</span></div>
+          <div>知覚 <span id="stat-per" class="text-gray-600 dark:text-gray-300 font-semibold">10</span> <span id="cp-per" class="text-[9px] text-gray-400">±0CP</span></div>
           <div>速度 <span id="stat-bs" class="text-gray-600 dark:text-gray-300 font-semibold">5.00</span></div>
           <div>移動 <span id="stat-bm" class="text-gray-600 dark:text-gray-300 font-semibold">5</span></div>
           <div>よけ <span id="stat-dodge" class="text-gray-600 dark:text-gray-300 font-semibold">8</span></div>
@@ -717,6 +717,16 @@ function updateCharDisplay() {
   fpCls += fpPct <= 25 ? 'text-red-600 dark:text-red-400' : fpPct <= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300';
   $el('hp-display').className = hpCls;
   $el('fp-display').className = fpCls;
+  // CP cost labels
+  function cl(v) { return v === 0 ? '±0CP' : (v > 0 ? '+' + v + 'CP' : v + 'CP'); }
+  $el('cp-st').textContent = cl((c.st - 10) * 10);
+  $el('cp-dx').textContent = cl((c.dx - 10) * 20);
+  $el('cp-iq').textContent = cl((c.iq - 10) * 20);
+  $el('cp-ht').textContent = cl((c.ht - 10) * 10);
+  $el('cp-hp').textContent = cl((c.hpMax - c.st) * 2);
+  $el('cp-fp').textContent = cl((c.fpMax - c.ht) * 3);
+  $el('cp-will').textContent = cl((c.will - c.iq) * 5);
+  $el('cp-per').textContent = cl((c.per - c.iq) * 5);
 }
 
 function renderCustomRules() {
@@ -749,7 +759,8 @@ function renderSkills() {
     div.innerHTML =
       '<span class="flex-1 text-xs text-gray-600 dark:text-gray-300 truncate">' + escHtml(skill.name) + '</span>' +
       '<span class="text-[10px] text-gray-400 mr-0.5">' + diffLabel + '</span>' +
-      '<span class="text-xs text-gray-400 w-6 text-right">' + level + '</span>';
+      '<span class="text-xs text-gray-400 w-6 text-right">' + level + '</span>' +
+      '<span class="text-[9px] text-gray-400 w-8 text-right">' + skill.cp + 'CP</span>';
     container.appendChild(div);
   });
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -762,16 +773,40 @@ function renderAdvantages() {
     container.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">GMが状況に応じて管理します</div>';
     return;
   }
-  state.advantages.forEach(function(adv) {
+  var pos = [], neg = [];
+  state.advantages.forEach(function(a) { (a.cost >= 0 ? pos : neg).push(a); });
+  if (pos.length) {
+    var posSum = 0;
+    pos.forEach(function(adv) {
+      posSum += adv.cost;
+      var div = document.createElement('div');
+      div.className = 'flex items-center gap-1';
+      div.innerHTML =
+        '<span class="flex-1 text-xs text-green-600 dark:text-green-400 truncate">' + escHtml(adv.name) + '</span>' +
+        '<span class="text-xs text-green-500">-' + adv.cost + 'CP</span>';
+      container.appendChild(div);
+    });
     var div = document.createElement('div');
-    div.className = 'flex items-center gap-1';
-    var isDisadv = adv.cost < 0;
-    var costLabel = isDisadv ? ('+' + Math.abs(adv.cost) + 'CP') : ('-' + adv.cost + 'CP');
-    div.innerHTML =
-      '<span class="flex-1 text-xs' + (isDisadv ? ' text-red-500' : ' text-green-600 dark:text-green-400') + ' truncate">' + escHtml(adv.name) + '</span>' +
-      '<span class="text-xs ' + (isDisadv ? 'text-red-400' : 'text-green-500') + '">' + costLabel + '</span>';
+    div.className = 'flex items-center gap-1 border-t border-gray-200 dark:border-gray-700 pt-0.5 mt-0.5';
+    div.innerHTML = '<span class="flex-1 text-[10px] text-green-600 dark:text-green-400 font-semibold">有利計</span><span class="text-[10px] text-green-500 font-semibold">-' + posSum + 'CP</span>';
     container.appendChild(div);
-  });
+  }
+  if (neg.length) {
+    var negSum = 0;
+    neg.forEach(function(adv) {
+      negSum += adv.cost;
+      var div = document.createElement('div');
+      div.className = 'flex items-center gap-1';
+      div.innerHTML =
+        '<span class="flex-1 text-xs text-red-500 truncate">' + escHtml(adv.name) + '</span>' +
+        '<span class="text-xs text-red-400">+' + Math.abs(adv.cost) + 'CP</span>';
+      container.appendChild(div);
+    });
+    var div = document.createElement('div');
+    div.className = 'flex items-center gap-1 border-t border-gray-200 dark:border-gray-700 pt-0.5 mt-0.5';
+    div.innerHTML = '<span class="flex-1 text-[10px] text-red-500 font-semibold">不利計</span><span class="text-[10px] text-red-400 font-semibold">+' + Math.abs(negSum) + 'CP</span>';
+    container.appendChild(div);
+  }
 }
 
 function escHtml(str) {
